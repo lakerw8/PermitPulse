@@ -1,10 +1,16 @@
+"use client";
+
+import { use } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { LockedContact } from "@/components/locked-contact";
-import { MOCK_PERMITS, formatFullCurrency } from "@/lib/mock-data";
+import { usePermits } from "@/lib/permits-context";
+import { useAuth } from "@/lib/auth-context";
+import { useLeads } from "@/lib/leads-context";
+import { formatFullCurrency } from "@/lib/mock-data";
 import {
   ArrowLeft,
   MapPin,
@@ -14,6 +20,8 @@ import {
   FileText,
   ExternalLink,
   Bookmark,
+  BookmarkCheck,
+  Check,
 } from "lucide-react";
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
@@ -36,24 +44,52 @@ const TRADE_COLORS: Record<string, string> = {
   "General Construction": "bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-300",
 };
 
-export default async function PermitDetailPage({
+export default function PermitDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const permit = MOCK_PERMITS.find((p) => p.id === id);
+  const { id } = use(params);
+  const router = useRouter();
+  const { permits } = usePermits();
+  const { user, isPaid } = useAuth();
+  const { isLeadSaved, saveLead, removeLead, canSaveMore } = useLeads();
+
+  const permit = permits.find((p) => p.id === id);
+  const saved = permit ? isLeadSaved(permit.id) : false;
 
   if (!permit) {
-    notFound();
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-16 text-center">
+        <h1 className="text-xl font-bold">Permit not found</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          This permit may have been removed or the ID is invalid.
+        </p>
+        <Button variant="outline" className="mt-4" onClick={() => router.push("/permits")}>
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          Back to permits
+        </Button>
+      </div>
+    );
+  }
+
+  function handleSaveToggle() {
+    if (!permit) return;
+    if (saved) {
+      removeLead(permit.id);
+    } else if (!user) {
+      router.push("/login");
+    } else if (canSaveMore(isPaid)) {
+      saveLead(permit.id);
+    }
   }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <div className="mb-6">
-        <Button variant="ghost" size="sm" className="mb-4" render={<Link href="/permits" />}>
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Back to permits
+        <Button variant="ghost" size="sm" className="mb-4" nativeButton={false} render={<Link href="/permits" />}>
+          <ArrowLeft className="mr-1 h-4 w-4" />
+          Back to permits
         </Button>
 
         <div className="flex items-start justify-between gap-4">
@@ -68,16 +104,28 @@ export default async function PermitDetailPage({
               {permit.city}, {permit.state} {permit.zip}
             </p>
           </div>
-          <Button variant="outline" size="sm">
-            <Bookmark className="mr-1 h-3.5 w-3.5" />
-            Save Lead
+          <Button
+            variant={saved ? "default" : "outline"}
+            size="sm"
+            onClick={handleSaveToggle}
+          >
+            {saved ? (
+              <>
+                <BookmarkCheck className="mr-1 h-3.5 w-3.5" />
+                Saved
+              </>
+            ) : (
+              <>
+                <Bookmark className="mr-1 h-3.5 w-3.5" />
+                Save Lead
+              </>
+            )}
           </Button>
         </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
-          {/* Description */}
           <Card className="gap-0 py-0">
             <CardContent className="p-5">
               <div className="mb-3 flex items-center gap-2">
@@ -88,7 +136,6 @@ export default async function PermitDetailPage({
             </CardContent>
           </Card>
 
-          {/* Details */}
           <Card className="gap-0 py-0">
             <CardContent className="p-5">
               <h2 className="mb-4 text-sm font-semibold">Permit Details</h2>
@@ -135,12 +182,10 @@ export default async function PermitDetailPage({
             </CardContent>
           </Card>
 
-          {/* GC Contact (locked) */}
-          <LockedContact contact={permit.gcContact} />
+          <LockedContact contact={permit.gcContact} isUnlocked={isPaid} />
         </div>
 
         <div className="space-y-4">
-          {/* Trades */}
           <Card className="gap-0 py-0">
             <CardContent className="p-4">
               <h3 className="mb-3 text-sm font-semibold">Relevant Trades</h3>
@@ -157,7 +202,6 @@ export default async function PermitDetailPage({
             </CardContent>
           </Card>
 
-          {/* Source */}
           <Card className="gap-0 py-0">
             <CardContent className="p-4">
               <h3 className="mb-3 text-sm font-semibold">Data Source</h3>
@@ -170,9 +214,7 @@ export default async function PermitDetailPage({
                   </p>
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground">
-                    Last Updated
-                  </span>
+                  <span className="text-xs text-muted-foreground">Last Updated</span>
                   <p className="font-medium">
                     {new Date(permit.sourceUpdatedAt).toLocaleDateString("en-US", {
                       month: "short",
@@ -185,20 +227,33 @@ export default async function PermitDetailPage({
             </CardContent>
           </Card>
 
-          {/* Upgrade CTA */}
-          <Card className="gap-0 border-amber-200 bg-gradient-to-b from-amber-50 to-orange-50 py-0 dark:border-amber-800 dark:from-amber-950/30 dark:to-orange-950/20">
-            <CardContent className="p-4 text-center">
-              <h3 className="text-sm font-semibold">
-                Want to reach this GC?
-              </h3>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Unlock full contact details with a paid plan
-              </p>
-              <Button size="sm" className="mt-3 w-full" render={<Link href="/pricing" />}>
-                Start 7-Day Free Trial
-              </Button>
-            </CardContent>
-          </Card>
+          {!isPaid && (
+            <Card className="gap-0 border-amber-200 bg-gradient-to-b from-amber-50 to-orange-50 py-0 dark:border-amber-800 dark:from-amber-950/30 dark:to-orange-950/20">
+              <CardContent className="p-4 text-center">
+                <h3 className="text-sm font-semibold">Want to reach this GC?</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Unlock full contact details with a paid plan
+                </p>
+                <Button size="sm" className="mt-3 w-full" nativeButton={false} render={<Link href="/pricing" />}>
+                  Start 7-Day Free Trial
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {isPaid && (
+            <Card className="gap-0 border-green-200 bg-green-50/50 py-0 dark:border-green-800 dark:bg-green-950/20">
+              <CardContent className="p-4 text-center">
+                <Check className="mx-auto mb-1 h-5 w-5 text-green-600" />
+                <h3 className="text-sm font-semibold text-green-800 dark:text-green-200">
+                  Full access active
+                </h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  GC contact details are unlocked
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

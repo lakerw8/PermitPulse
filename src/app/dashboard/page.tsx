@@ -1,16 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Bookmark,
   ArrowRight,
-  MapPin,
   DollarSign,
   Calendar,
   Lock,
@@ -19,9 +26,15 @@ import {
   Settings,
   Bell,
   Download,
+  Crown,
+  Check,
+  RefreshCw,
 } from "lucide-react";
-import { MOCK_PERMITS, formatCurrency } from "@/lib/mock-data";
-import type { LeadStatus } from "@/lib/types";
+import { useAuth, type Plan } from "@/lib/auth-context";
+import { useLeads } from "@/lib/leads-context";
+import { usePermits } from "@/lib/permits-context";
+import { formatCurrency } from "@/lib/mock-data";
+import { TRADES, type LeadStatus, type Trade } from "@/lib/types";
 
 const STATUS_OPTIONS: { value: LeadStatus; label: string; color: string }[] = [
   { value: "Saved", label: "Saved", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" },
@@ -30,20 +43,47 @@ const STATUS_OPTIONS: { value: LeadStatus; label: string; color: string }[] = [
   { value: "Won", label: "Won", color: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" },
 ];
 
-const DEMO_SAVED = MOCK_PERMITS.slice(0, 4).map((p, i) => ({
-  permit: p,
-  status: (["Saved", "Contacted", "Saved", "Won"] as LeadStatus[])[i],
-  notes: [
-    "Looks like a great fit for our team. Follow up Monday.",
-    "Called Mike on 8/14 - said RFQ going out next week.",
-    "",
-    "Won the HVAC sub! PO coming.",
-  ][i],
-  savedAt: p.filingDate,
-}));
+const PLAN_LABELS: Record<Plan, string> = {
+  free: "Free Account",
+  starter: "Starter ($199/mo)",
+  pro: "Pro ($349/mo)",
+  growth: "Growth ($499/mo)",
+};
 
 export default function DashboardPage() {
-  const [savedLeads] = useState(DEMO_SAVED);
+  const router = useRouter();
+  const { user, isPaid, updateUser, isLoading } = useAuth();
+  const { leads, removeLead, updateLeadStatus, updateLeadNotes, exportCSV } = useLeads();
+  const { permits } = usePermits();
+  const [editingNotes, setEditingNotes] = useState<string | null>(null);
+  const [notesDraft, setNotesDraft] = useState("");
+
+  useEffect(() => {
+    if (!isLoading && !user) router.replace("/login");
+  }, [isLoading, user, router]);
+
+  if (isLoading || !user) return null;
+
+  const savedPermits = leads.map((lead) => ({
+    lead,
+    permit: permits.find((p) => p.id === lead.permitId),
+  })).filter((item) => item.permit !== undefined);
+
+  function startEditNotes(permitId: string, currentNotes: string) {
+    setEditingNotes(permitId);
+    setNotesDraft(currentNotes);
+  }
+
+  function saveNotes(permitId: string) {
+    updateLeadNotes(permitId, notesDraft);
+    setEditingNotes(null);
+  }
+
+  function handleStartTrial() {
+    const trialEnd = new Date();
+    trialEnd.setDate(trialEnd.getDate() + 7);
+    updateUser({ plan: "starter", trialEndsAt: trialEnd.toISOString() });
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -54,8 +94,9 @@ export default function DashboardPage() {
             Manage your saved leads and account
           </p>
         </div>
-        <Badge variant="secondary" className="text-sm">
-          Free Account
+        <Badge variant={isPaid ? "default" : "secondary"} className="text-sm">
+          {isPaid && <Crown className="mr-1 h-3 w-3" />}
+          {PLAN_LABELS[user.plan]}
         </Badge>
       </div>
 
@@ -63,7 +104,7 @@ export default function DashboardPage() {
         <TabsList>
           <TabsTrigger value="leads">
             <Bookmark className="mr-1.5 h-3.5 w-3.5" />
-            Saved Leads
+            Saved Leads ({leads.length})
           </TabsTrigger>
           <TabsTrigger value="settings">
             <Settings className="mr-1.5 h-3.5 w-3.5" />
@@ -72,13 +113,13 @@ export default function DashboardPage() {
         </TabsList>
 
         <TabsContent value="leads" className="mt-4">
-          {/* Stats bar */}
+          {/* Stats */}
           <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { label: "Saved", count: savedLeads.filter((l) => l.status === "Saved").length },
-              { label: "Contacted", count: savedLeads.filter((l) => l.status === "Contacted").length },
-              { label: "Won", count: savedLeads.filter((l) => l.status === "Won").length },
-              { label: "Total", count: savedLeads.length },
+              { label: "Saved", count: leads.filter((l) => l.status === "Saved").length },
+              { label: "Contacted", count: leads.filter((l) => l.status === "Contacted").length },
+              { label: "Won", count: leads.filter((l) => l.status === "Won").length },
+              { label: "Total", count: leads.length },
             ].map((s) => (
               <Card key={s.label} className="gap-0 py-0">
                 <CardContent className="p-3 text-center">
@@ -89,85 +130,163 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          {/* Lead limit warning */}
-          <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 dark:border-amber-800 dark:bg-amber-950/30">
-            <span className="text-sm text-amber-800 dark:text-amber-200">
-              {savedLeads.length}/15 leads saved (free account limit)
-            </span>
-            <Button size="sm" variant="outline" className="text-xs" render={<Link href="/pricing" />}>
-              Upgrade for unlimited
-            </Button>
-          </div>
+          {/* Limit warning */}
+          {!isPaid && (
+            <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 dark:border-amber-800 dark:bg-amber-950/30">
+              <span className="text-sm text-amber-800 dark:text-amber-200">
+                {leads.length}/15 leads saved (free account limit)
+              </span>
+              <Button size="sm" variant="outline" className="text-xs" onClick={handleStartTrial}>
+                Start free trial
+              </Button>
+            </div>
+          )}
 
           {/* Lead list */}
-          <div className="space-y-3">
-            {savedLeads.map((lead) => (
-              <Card key={lead.permit.id} className="gap-0 py-0">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <Link
-                          href={`/permits/${lead.permit.id}`}
-                          className="text-sm font-semibold hover:underline"
-                        >
-                          {lead.permit.address}
-                        </Link>
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_OPTIONS.find((s) => s.value === lead.status)?.color}`}
-                        >
-                          {lead.status}
-                        </span>
-                      </div>
+          {savedPermits.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
+              <Bookmark className="mb-2 h-6 w-6 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">No saved leads yet</p>
+              <Button variant="outline" size="sm" className="mt-3" nativeButton={false} render={<Link href="/permits" />}>
+                Browse permits
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {savedPermits.map(({ lead, permit }) => (
+                <Card key={lead.permitId} className="gap-0 py-0">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Link
+                            href={`/permits/${permit!.id}`}
+                            className="text-sm font-semibold hover:underline"
+                          >
+                            {permit!.address}
+                          </Link>
+                          <select
+                            value={lead.status}
+                            onChange={(e) =>
+                              updateLeadStatus(lead.permitId, e.target.value as LeadStatus)
+                            }
+                            className={`rounded-full border-0 px-2 py-0.5 text-xs font-medium ${STATUS_OPTIONS.find((s) => s.value === lead.status)?.color}`}
+                          >
+                            {STATUS_OPTIONS.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
 
-                      <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
-                        {lead.permit.description}
-                      </p>
-
-                      <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <DollarSign className="h-3 w-3" />
-                          {formatCurrency(lead.permit.estimatedValue)}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          Saved{" "}
-                          {new Date(lead.savedAt).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                        </span>
-                      </div>
-
-                      {lead.notes && (
-                        <p className="mt-2 rounded bg-muted/50 px-2 py-1.5 text-xs italic text-muted-foreground">
-                          {lead.notes}
+                        <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
+                          {permit!.description}
                         </p>
-                      )}
 
-                      {/* Locked GC contact */}
-                      <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-                        <Lock className="h-3 w-3" />
-                        <span>GC contact locked</span>
-                        <span className="text-muted-foreground">&middot;</span>
-                        <Link href="/pricing" className="font-medium hover:underline">
-                          Upgrade to unlock
-                        </Link>
+                        <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="h-3 w-3" />
+                            {formatCurrency(permit!.estimatedValue)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            Saved{" "}
+                            {new Date(lead.savedAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </span>
+                          <span className="text-xs">
+                            {permit!.trades.slice(0, 2).join(", ")}
+                          </span>
+                        </div>
+
+                        {/* Notes */}
+                        {editingNotes === lead.permitId ? (
+                          <div className="mt-2 space-y-1.5">
+                            <Textarea
+                              value={notesDraft}
+                              onChange={(e) => setNotesDraft(e.target.value)}
+                              placeholder="Add notes about this lead..."
+                              className="min-h-[60px] text-xs"
+                              autoFocus
+                            />
+                            <div className="flex gap-1.5">
+                              <Button
+                                size="sm"
+                                className="h-6 text-xs"
+                                onClick={() => saveNotes(lead.permitId)}
+                              >
+                                Save
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 text-xs"
+                                onClick={() => setEditingNotes(null)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => startEditNotes(lead.permitId, lead.notes)}
+                            className="mt-2 w-full text-left"
+                          >
+                            {lead.notes ? (
+                              <p className="rounded bg-muted/50 px-2 py-1.5 text-xs italic text-muted-foreground hover:bg-muted transition-colors">
+                                {lead.notes}
+                              </p>
+                            ) : (
+                              <p className="rounded border border-dashed px-2 py-1.5 text-xs text-muted-foreground/50 hover:border-foreground/20 transition-colors">
+                                Click to add notes...
+                              </p>
+                            )}
+                          </button>
+                        )}
+
+                        {/* GC contact status */}
+                        {isPaid ? (
+                          <div className="mt-2 flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                            <Building2 className="h-3 w-3" />
+                            <span>{permit!.gcContact.companyName}</span>
+                            {permit!.gcContact.phone && (
+                              <>
+                                <span className="text-muted-foreground">&middot;</span>
+                                <span>{permit!.gcContact.phone}</span>
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                            <Lock className="h-3 w-3" />
+                            <span>GC contact locked</span>
+                            <span className="text-muted-foreground">&middot;</span>
+                            <button onClick={handleStartTrial} className="font-medium hover:underline">
+                              Start trial to unlock
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    </div>
 
-                    <div className="flex flex-col gap-1">
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => removeLead(lead.permitId)}
+                      >
                         <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
 
-          {/* Export CTA */}
+          {/* Export */}
           <div className="mt-6 flex items-center justify-between rounded-lg border border-dashed p-4">
             <div>
               <div className="flex items-center gap-2 text-sm font-medium">
@@ -175,12 +294,26 @@ export default function DashboardPage() {
                 Export to CSV
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Available on paid plans
+                {isPaid
+                  ? `Export ${leads.length} saved leads with full GC contacts`
+                  : "Available on paid plans"}
               </p>
             </div>
-            <Button variant="outline" size="sm" render={<Link href="/pricing" />}>
-              Upgrade
-            </Button>
+            {isPaid ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => exportCSV(permits)}
+                disabled={leads.length === 0}
+              >
+                <Download className="mr-1 h-3.5 w-3.5" />
+                Export
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" onClick={handleStartTrial}>
+                Start Trial
+              </Button>
+            )}
           </div>
         </TabsContent>
 
@@ -192,12 +325,56 @@ export default function DashboardPage() {
                 <div className="mt-3 space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Email</span>
-                    <span>demo@company.com</span>
+                    <span>{user.email}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Plan</span>
-                    <span>Free</span>
+                    <span>{PLAN_LABELS[user.plan]}</span>
                   </div>
+                  {user.trialEndsAt && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Trial ends</span>
+                      <span>
+                        {new Date(user.trialEndsAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Plan simulator */}
+            <Card className="gap-0 border-blue-200 bg-blue-50/50 py-0 dark:border-blue-800 dark:bg-blue-950/20">
+              <CardContent className="p-5">
+                <h3 className="text-sm font-semibold">Plan Simulator (Dev Mode)</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Switch plans to test the paywall experience
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {(["free", "starter", "pro", "growth"] as Plan[]).map((plan) => (
+                    <Button
+                      key={plan}
+                      size="sm"
+                      variant={user.plan === plan ? "default" : "outline"}
+                      className="text-xs"
+                      onClick={() => {
+                        if (plan === "free") {
+                          updateUser({ plan, trialEndsAt: null });
+                        } else {
+                          const trial = new Date();
+                          trial.setDate(trial.getDate() + 7);
+                          updateUser({ plan, trialEndsAt: trial.toISOString() });
+                        }
+                      }}
+                    >
+                      {plan === user.plan && <Check className="mr-1 h-3 w-3" />}
+                      {plan.charAt(0).toUpperCase() + plan.slice(1)}
+                    </Button>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -205,14 +382,31 @@ export default function DashboardPage() {
             <Card className="gap-0 py-0">
               <CardContent className="p-5">
                 <h3 className="text-sm font-semibold">Preferences</h3>
-                <div className="mt-3 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Metro</span>
-                    <span>Chicago, IL</span>
+                <div className="mt-3 space-y-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground">Metro</label>
+                    <p className="text-sm font-medium">{user.metro}</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Primary Trade</span>
-                    <span>HVAC</span>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">
+                      Primary Trade
+                    </label>
+                    <select
+                      value={user.primaryTrade ?? ""}
+                      onChange={(e) =>
+                        updateUser({
+                          primaryTrade: (e.target.value || null) as Trade | null,
+                        })
+                      }
+                      className="w-full rounded-md border bg-background px-3 py-1.5 text-sm"
+                    >
+                      <option value="">Select a trade</option>
+                      {TRADES.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </CardContent>
@@ -225,25 +419,14 @@ export default function DashboardPage() {
                   <h3 className="text-sm font-semibold">Email Digest</h3>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Weekly digest for Chicago, IL &middot; HVAC
+                  Weekly digest for {user.metro}
+                  {user.primaryTrade && ` · ${user.primaryTrade}`}
                 </p>
-                <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-                  GC contact details in digest require a paid plan
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="gap-0 border-amber-200 bg-gradient-to-b from-amber-50 to-orange-50 py-0 dark:border-amber-800 dark:from-amber-950/30 dark:to-orange-950/20">
-              <CardContent className="p-5 text-center">
-                <Building2 className="mx-auto mb-2 h-6 w-6 text-amber-600 dark:text-amber-400" />
-                <h3 className="text-sm font-semibold">Upgrade Your Account</h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Unlock GC contacts, unlimited saves, CSV export, and more
-                </p>
-                <Button size="sm" className="mt-3" render={<Link href="/pricing" />}>
-                    View Plans
-                    <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                </Button>
+                {!isPaid && (
+                  <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                    GC contact details in digest require a paid plan
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>

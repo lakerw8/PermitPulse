@@ -63,6 +63,7 @@ export default function PricingPage() {
                     : ""
                 }`}
                 variant={plan.highlighted ? "default" : "outline"}
+                nativeButton={false}
                 render={<Link href="/login" />}
               >
                   Start Free Trial
@@ -111,7 +112,7 @@ export default function PricingPage() {
           <div className="mt-6 sm:ml-8 sm:mt-0">
             <div className="text-3xl font-bold">$0</div>
             <div className="text-xs text-muted-foreground">Forever free</div>
-            <Button variant="outline" size="sm" className="mt-3" render={<Link href="/login" />}>
+            <Button variant="outline" size="sm" className="mt-3" nativeButton={false} render={<Link href="/login" />}>
               Create Free Account
             </Button>
           </div>

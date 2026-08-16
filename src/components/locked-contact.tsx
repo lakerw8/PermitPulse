@@ -109,11 +109,11 @@ export function LockedContact({ contact, isUnlocked = false }: LockedContactProp
             Get the company name, contact person, phone, and email with a paid plan.
           </p>
           <div className="mt-3 flex gap-2">
-            <Button size="sm" render={<Link href="/pricing" />}>
+            <Button size="sm" nativeButton={false} render={<Link href="/pricing" />}>
               Start 7-Day Free Trial
               <ArrowRight className="ml-1 h-3.5 w-3.5" />
             </Button>
-            <Button variant="outline" size="sm" render={<Link href="/pricing" />}>
+            <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/pricing" />}>
               View Plans
             </Button>
           </div>

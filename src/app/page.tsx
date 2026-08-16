@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PermitCard } from "@/components/permit-card";
-import { MOCK_PERMITS } from "@/lib/mock-data";
+import { usePermits } from "@/lib/permits-context";
+import { formatCurrency } from "@/lib/mock-data";
 import {
   ArrowRight,
   Zap,
@@ -15,8 +18,9 @@ import {
 } from "lucide-react";
 
 export default function HomePage() {
-  const recentPermits = MOCK_PERMITS.slice(0, 6);
-  const totalValue = MOCK_PERMITS.reduce((sum, p) => sum + p.estimatedValue, 0);
+  const { permits } = usePermits();
+  const recentPermits = permits.slice(0, 6);
+  const totalValue = permits.reduce((sum, p) => sum + p.estimatedValue, 0);
 
   return (
     <div>
@@ -43,11 +47,11 @@ export default function HomePage() {
             </p>
 
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Button size="lg" render={<Link href="/permits" />}>
+              <Button size="lg" nativeButton={false} render={<Link href="/permits" />}>
                   Browse Permits Free
                   <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button size="lg" variant="outline" render={<Link href="/pricing" />}>
+              <Button size="lg" variant="outline" nativeButton={false} render={<Link href="/pricing" />}>
                 Start 7-Day Free Trial
               </Button>
             </div>
@@ -66,7 +70,7 @@ export default function HomePage() {
             {[
               {
                 label: "Active Permits",
-                value: MOCK_PERMITS.length.toString(),
+                value: permits.length.toString(),
                 icon: Building2,
               },
               {
@@ -97,7 +101,7 @@ export default function HomePage() {
                 Latest filings from Chicago, IL
               </p>
             </div>
-            <Button variant="ghost" size="sm" render={<Link href="/permits" />}>
+            <Button variant="ghost" size="sm" nativeButton={false} render={<Link href="/permits" />}>
                 View all
                 <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
@@ -124,28 +128,25 @@ export default function HomePage() {
           <div className="mt-10 grid gap-8 sm:grid-cols-3">
             {[
               {
-                step: "1",
                 icon: Search,
                 title: "Browse & Filter",
                 description:
                   "See new commercial permits filed in your city. Filter by trade, project value, and keywords to find relevant work.",
               },
               {
-                step: "2",
                 icon: Phone,
                 title: "Unlock GC Contacts",
                 description:
                   "Get the General Contractor's name, phone number, and email. Our enrichment engine finds the right decision-maker.",
               },
               {
-                step: "3",
                 icon: TrendingUp,
                 title: "Win More Work",
                 description:
                   "Reach out to GCs weeks before projects hit public bid boards. Build relationships early and win more bids.",
               },
             ].map((item) => (
-              <div key={item.step} className="text-center">
+              <div key={item.title} className="text-center">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
                   <item.icon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                 </div>
@@ -176,6 +177,7 @@ export default function HomePage() {
                 size="lg"
                 variant="secondary"
                 className="bg-white text-amber-700 hover:bg-amber-50"
+                nativeButton={false}
                 render={<Link href="/pricing" />}
               >
                   Start Free Trial
@@ -185,6 +187,7 @@ export default function HomePage() {
                 size="lg"
                 variant="outline"
                 className="border-white/30 text-white hover:bg-white/10"
+                nativeButton={false}
                 render={<Link href="/permits" />}
               >
                 Browse Permits
