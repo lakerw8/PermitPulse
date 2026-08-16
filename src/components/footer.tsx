@@ -36,9 +36,10 @@ export function Footer() {
             <h3 className="text-sm font-semibold">Coverage</h3>
             <ul className="mt-3 space-y-2">
               <li className="text-sm text-muted-foreground">Chicago, IL</li>
-              <li className="text-sm text-muted-foreground opacity-50">
-                More cities coming soon
-              </li>
+              <li className="text-sm text-muted-foreground">Austin, TX</li>
+              <li className="text-sm text-muted-foreground">San Francisco, CA</li>
+              <li className="text-sm text-muted-foreground">Seattle, WA</li>
+              <li className="text-sm text-muted-foreground">New York, NY</li>
             </ul>
           </div>
 

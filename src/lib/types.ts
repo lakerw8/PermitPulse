@@ -1,3 +1,18 @@
+export interface Metro {
+  id: string;
+  name: string;
+  state: string;
+  label: string;
+}
+
+export const METROS: Metro[] = [
+  { id: "chicago", name: "Chicago", state: "IL", label: "Chicago, IL" },
+  { id: "austin", name: "Austin", state: "TX", label: "Austin, TX" },
+  { id: "san-francisco", name: "San Francisco", state: "CA", label: "San Francisco, CA" },
+  { id: "seattle", name: "Seattle", state: "WA", label: "Seattle, WA" },
+  { id: "new-york", name: "New York", state: "NY", label: "New York, NY" },
+];
+
 export type Trade =
   | "HVAC"
   | "Electrical"

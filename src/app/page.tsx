@@ -30,7 +30,7 @@ export default function HomePage() {
           <div className="mx-auto max-w-3xl text-center">
             <Badge variant="secondary" className="mb-4 text-sm">
               <Zap className="mr-1 h-3 w-3 text-amber-500" />
-              Now tracking Chicago, IL
+              Now tracking 5 metros: Chicago, Austin, SF, Seattle, NYC
             </Badge>
 
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">

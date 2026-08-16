@@ -17,6 +17,8 @@ interface PermitsContextValue {
   error: string | null;
   dataSource: "mock" | "live";
   setDataSource: (source: "mock" | "live") => void;
+  metro: string;
+  setMetro: (metro: string) => void;
   refresh: () => Promise<void>;
   lastUpdated: Date | null;
 }
@@ -28,13 +30,14 @@ export function PermitsProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dataSource, setDataSource] = useState<"mock" | "live">("mock");
+  const [metro, setMetro] = useState("chicago");
   const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
 
-  const fetchLivePermits = useCallback(async () => {
+  const fetchLivePermits = useCallback(async (targetMetro: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/permits");
+      const res = await fetch(`/api/permits?metro=${targetMetro}`);
       if (!res.ok) throw new Error("Failed to fetch permits");
       const data: Permit[] = await res.json();
       setPermits(data.length > 0 ? data : MOCK_PERMITS);
@@ -43,7 +46,7 @@ export function PermitsProvider({ children }: { children: ReactNode }) {
         setError("No live data available, showing sample permits");
         setDataSource("mock");
       }
-    } catch (e) {
+    } catch {
       setError("Could not load live data, showing sample permits");
       setPermits(MOCK_PERMITS);
       setDataSource("mock");
@@ -54,22 +57,22 @@ export function PermitsProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     if (dataSource === "live") {
-      await fetchLivePermits();
+      await fetchLivePermits(metro);
     } else {
       setPermits(MOCK_PERMITS);
       setLastUpdated(new Date());
     }
-  }, [dataSource, fetchLivePermits]);
+  }, [dataSource, metro, fetchLivePermits]);
 
   useEffect(() => {
     if (dataSource === "live") {
-      fetchLivePermits();
+      fetchLivePermits(metro);
     } else {
       setPermits(MOCK_PERMITS);
       setLastUpdated(new Date());
       setError(null);
     }
-  }, [dataSource, fetchLivePermits]);
+  }, [dataSource, metro, fetchLivePermits]);
 
   return (
     <PermitsContext.Provider
@@ -79,6 +82,8 @@ export function PermitsProvider({ children }: { children: ReactNode }) {
         error,
         dataSource,
         setDataSource,
+        metro,
+        setMetro,
         refresh,
         lastUpdated,
       }}

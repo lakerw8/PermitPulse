@@ -1,11 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import type { Permit, Trade, PermitStatus, ContactConfidence } from "@/lib/types";
 
-const SODA_ENDPOINT =
-  "https://data.cityofchicago.org/resource/ydr8-5enu.json";
-
 const TRADE_KEYWORDS: Record<Trade, string[]> = {
-  HVAC: ["hvac", "heating", "ventilation", "air condition", "cooling", "ductwork", "rooftop unit", "ahu", "chiller", "boiler", "furnace"],
+  HVAC: ["hvac", "heating", "ventilation", "air condition", "cooling", "ductwork", "rooftop unit", "ahu", "chiller", "boiler", "furnace", "mechanical"],
   Electrical: ["electrical", "electric", "wiring", "panel", "switchgear", "generator", "transformer", "circuit", "conduit", "lighting"],
   Plumbing: ["plumbing", "plumb", "pipe", "water", "sewer", "drain", "fixture", "backflow", "grease trap", "sump"],
   Roofing: ["roof", "roofing", "membrane", "shingle", "tpo", "epdm", "flashing", "parapet"],
@@ -17,17 +14,12 @@ const TRADE_KEYWORDS: Record<Trade, string[]> = {
   "General Construction": ["renovation", "remodel", "buildout", "build-out", "tenant improvement", "interior finish", "construction"],
 };
 
-const COMMERCIAL_KEYWORDS = [
-  "commercial", "office", "retail", "restaurant", "hotel", "hospital",
-  "medical", "warehouse", "industrial", "mixed-use", "multi-family",
-  "apartment", "condo", "parking", "garage", "school", "church",
-  "theater", "gym", "fitness", "data center", "laboratory", "lab",
-];
-
 const RESIDENTIAL_KEYWORDS = [
   "single family", "single-family", "sfh", "1-story residence",
   "2-story residence", "residential garage", "deck", "porch",
-  "backyard", "driveway",
+  "backyard", "driveway", "one-family dwelling", "one family dwelling",
+  "two-family dwelling", "two family dwelling", "duplex",
+  "townhouse", "detached house",
 ];
 
 function classifyTrades(description: string): Trade[] {
@@ -38,25 +30,13 @@ function classifyTrades(description: string): Trade[] {
       trades.push(trade as Trade);
     }
   }
-  if (trades.length === 0) {
-    trades.push("General Construction");
-  }
+  if (trades.length === 0) trades.push("General Construction");
   return trades;
 }
 
-function isCommercial(record: Record<string, string>): boolean {
-  const desc = (record.work_description || record._description || "").toLowerCase();
-  const permitType = (record.permit_type || "").toLowerCase();
-
-  if (RESIDENTIAL_KEYWORDS.some((kw) => desc.includes(kw))) return false;
-
-  if (COMMERCIAL_KEYWORDS.some((kw) => desc.includes(kw))) return true;
-  if (permitType.includes("permit - new construction")) return true;
-
-  const value = parseFloat(record.reported_cost || record.estimated_cost || "0");
-  if (value >= 200000) return true;
-
-  return false;
+function isLikelyResidential(description: string): boolean {
+  const lower = description.toLowerCase();
+  return RESIDENTIAL_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
 function mapStatus(status: string | undefined): PermitStatus {
@@ -69,113 +49,256 @@ function mapStatus(status: string | undefined): PermitStatus {
   return "Issued";
 }
 
-function extractGCName(record: Record<string, string>): string {
-  return (
-    record.contractor_1_name ||
-    record.general_contractor ||
-    record.contact_1_name ||
-    "Unknown Contractor"
-  );
+function dateNDaysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().split("T")[0];
 }
 
-interface SodaRecord {
-  id: string;
-  permit_: string;
-  permit_type: string;
-  work_description: string;
-  _description?: string;
-  street_number: string;
-  street_direction: string;
-  street_name: string;
-  suffix: string;
-  reported_cost: string;
-  estimated_cost?: string;
-  issue_date: string;
-  permit_status?: string;
-  contractor_1_name?: string;
-  general_contractor?: string;
-  contact_1_name?: string;
-  contact_1_type?: string;
-  contact_1_city?: string;
-  contact_1_state?: string;
-  contact_1_zipcode?: string;
-  latitude: string;
-  longitude: string;
-  [key: string]: string | undefined;
+interface CityAdapter {
+  domain: string;
+  datasetId: string;
+  city: string;
+  state: string;
+  buildQuery(dateStr: string): URLSearchParams;
+  toPermit(record: Record<string, string>, idx: number): Permit | null;
 }
 
-export async function GET() {
-  try {
-    const fourteenDaysAgo = new Date();
-    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
-    const dateStr = fourteenDaysAgo.toISOString().split("T")[0];
-
-    const params = new URLSearchParams({
+// ---------- CHICAGO ----------
+const chicago: CityAdapter = {
+  domain: "data.cityofchicago.org",
+  datasetId: "ydr8-5enu",
+  city: "Chicago",
+  state: "IL",
+  buildQuery(dateStr) {
+    return new URLSearchParams({
       $where: `issue_date >= '${dateStr}T00:00:00.000' AND reported_cost > 100000`,
       $order: "issue_date DESC",
       $limit: "100",
     });
+  },
+  toPermit(r, idx) {
+    const desc = r.work_description || r._description || "";
+    if (isLikelyResidential(desc)) return null;
+    const value = parseFloat(r.reported_cost || "0");
+    const address = [r.street_number, r.street_direction, r.street_name, r.suffix].filter(Boolean).join(" ");
+    const gcName = r.contractor_1_name || r.general_contractor || r.contact_1_name || "Unknown Contractor";
+    const confidence: ContactConfidence = gcName === "Unknown Contractor" ? "Low" : r.contractor_1_name ? "High" : "Medium";
+    return {
+      id: `chi-${r.id || idx}`,
+      permitNumber: r.permit_ || `CHI-${idx}`,
+      address,
+      city: "Chicago",
+      state: "IL",
+      zip: r.contact_1_zipcode || "60601",
+      latitude: parseFloat(r.latitude || "41.8781"),
+      longitude: parseFloat(r.longitude || "-87.6298"),
+      filingDate: r.issue_date?.split("T")[0] || dateNDaysAgo(0),
+      description: desc || "Commercial construction work",
+      estimatedValue: value,
+      status: mapStatus(r.permit_status),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: gcName, contactName: null, phone: null, email: null, confidence },
+      source: "data.cityofchicago.org",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
 
-    const res = await fetch(`${SODA_ENDPOINT}?${params}`, {
+// ---------- AUSTIN ----------
+const austin: CityAdapter = {
+  domain: "data.austintexas.gov",
+  datasetId: "3syk-w9eu",
+  city: "Austin",
+  state: "TX",
+  buildQuery(dateStr) {
+    return new URLSearchParams({
+      $where: `issue_date >= '${dateStr}T00:00:00.000' AND total_job_valuation > 100000`,
+      $order: "issue_date DESC",
+      $limit: "100",
+    });
+  },
+  toPermit(r, idx) {
+    const desc = r.description || r.work_class || "";
+    if (isLikelyResidential(desc)) return null;
+    const value = parseFloat(r.total_job_valuation || "0");
+    const gcName = r.contractor_company_name || r.contractor_full_name || "Unknown Contractor";
+    const confidence: ContactConfidence = gcName === "Unknown Contractor" ? "Low" : r.contractor_company_name ? "High" : "Medium";
+    return {
+      id: `aus-${r.permit_number || idx}`,
+      permitNumber: r.permit_number || `AUS-${idx}`,
+      address: r.permit_location || r.original_address || "Austin, TX",
+      city: "Austin",
+      state: "TX",
+      zip: "78701",
+      latitude: parseFloat(r.latitude || "30.2672"),
+      longitude: parseFloat(r.longitude || "-97.7431"),
+      filingDate: r.issue_date?.split("T")[0] || dateNDaysAgo(0),
+      description: desc || "Commercial construction work",
+      estimatedValue: value,
+      status: mapStatus(r.status_current),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: gcName, contactName: r.contractor_full_name || null, phone: null, email: null, confidence },
+      source: "data.austintexas.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+// ---------- SAN FRANCISCO ----------
+const sanFrancisco: CityAdapter = {
+  domain: "data.sfgov.org",
+  datasetId: "i98e-djp9",
+  city: "San Francisco",
+  state: "CA",
+  buildQuery(dateStr) {
+    return new URLSearchParams({
+      $where: `issued_date >= '${dateStr}T00:00:00.000' AND estimated_cost::number > 100000`,
+      $order: "issued_date DESC",
+      $limit: "100",
+    });
+  },
+  toPermit(r, idx) {
+    const desc = r.description || "";
+    if (isLikelyResidential(desc)) return null;
+    const value = parseFloat(r.estimated_cost || r.revised_cost || "0");
+    const address = [r.street_number, r.street_name, r.street_suffix].filter(Boolean).join(" ");
+    return {
+      id: `sf-${r.permit_number || idx}`,
+      permitNumber: r.permit_number || `SF-${idx}`,
+      address: address || "San Francisco, CA",
+      city: "San Francisco",
+      state: "CA",
+      zip: r.zipcode || "94102",
+      latitude: parseFloat(r.location?.latitude || r.latitude || "37.7749"),
+      longitude: parseFloat(r.location?.longitude || r.longitude || "-122.4194"),
+      filingDate: r.issued_date?.split("T")[0] || r.filed_date?.split("T")[0] || dateNDaysAgo(0),
+      description: desc || "Commercial construction work",
+      estimatedValue: value,
+      status: mapStatus(r.status),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Contact via SF DBI", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "data.sfgov.org",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+// ---------- SEATTLE ----------
+const seattle: CityAdapter = {
+  domain: "data.seattle.gov",
+  datasetId: "76t5-zqzr",
+  city: "Seattle",
+  state: "WA",
+  buildQuery(dateStr) {
+    return new URLSearchParams({
+      $where: `issueddate >= '${dateStr}T00:00:00.000' AND estprojectcost > 100000`,
+      $order: "issueddate DESC",
+      $limit: "100",
+    });
+  },
+  toPermit(r, idx) {
+    const desc = r.description || r.permittypedesc || "";
+    if (isLikelyResidential(desc)) return null;
+    const value = parseFloat(r.estprojectcost || "0");
+    const gcName = r.contractorcompanyname || "Unknown Contractor";
+    const confidence: ContactConfidence = gcName === "Unknown Contractor" ? "Low" : "Medium";
+    return {
+      id: `sea-${r.permitnum || idx}`,
+      permitNumber: r.permitnum || `SEA-${idx}`,
+      address: r.originaladdress1 || "Seattle, WA",
+      city: "Seattle",
+      state: "WA",
+      zip: r.originalzip || "98101",
+      latitude: parseFloat(r.latitude || "47.6062"),
+      longitude: parseFloat(r.longitude || "-122.3321"),
+      filingDate: r.issueddate?.split("T")[0] || dateNDaysAgo(0),
+      description: desc || "Commercial construction work",
+      estimatedValue: value,
+      status: mapStatus(r.statuscurrent),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: gcName, contactName: null, phone: null, email: null, confidence },
+      source: "data.seattle.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+// ---------- NEW YORK CITY ----------
+const newYork: CityAdapter = {
+  domain: "data.cityofnewyork.us",
+  datasetId: "rbx6-tga4",
+  city: "New York",
+  state: "NY",
+  buildQuery(dateStr) {
+    return new URLSearchParams({
+      $where: `issued_date >= '${dateStr}T00:00:00.000' AND issued_date IS NOT NULL AND estimated_job_costs::number > 100000`,
+      $order: "issued_date DESC",
+      $limit: "100",
+    });
+  },
+  toPermit(r, idx) {
+    const desc = r.job_description || r.work_type || "";
+    if (isLikelyResidential(desc)) return null;
+    const value = parseFloat(r.estimated_job_costs || "0");
+    const address = [r.house_no, r.street_name].filter(Boolean).join(" ");
+    const borough = r.borough || "";
+    const gcName = r.applicant_business_name || [r.applicant_first_name, r.applicant_last_name].filter(Boolean).join(" ") || "Unknown Contractor";
+    const confidence: ContactConfidence = gcName === "Unknown Contractor" ? "Low" : r.applicant_business_name ? "High" : "Medium";
+    return {
+      id: `nyc-${r.job_filing_number || r.work_permit || idx}`,
+      permitNumber: r.job_filing_number || r.work_permit || `NYC-${idx}`,
+      address: address ? `${address}, ${borough}` : `${borough || "New York"}, NY`,
+      city: "New York",
+      state: "NY",
+      zip: "10001",
+      latitude: 40.7128,
+      longitude: -74.006,
+      filingDate: r.issued_date?.split("T")[0] || dateNDaysAgo(0),
+      description: desc || "Commercial construction work",
+      estimatedValue: value,
+      status: mapStatus(r.permit_status),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: gcName, contactName: r.applicant_first_name ? `${r.applicant_first_name} ${r.applicant_last_name || ""}`.trim() : null, phone: null, email: null, confidence },
+      source: "data.cityofnewyork.us",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const ADAPTERS: Record<string, CityAdapter> = {
+  chicago,
+  austin,
+  "san-francisco": sanFrancisco,
+  seattle,
+  "new-york": newYork,
+};
+
+export async function GET(request: NextRequest) {
+  const metro = request.nextUrl.searchParams.get("metro") || "chicago";
+  const adapter = ADAPTERS[metro];
+
+  if (!adapter) {
+    return NextResponse.json([], { status: 200 });
+  }
+
+  try {
+    const dateStr = dateNDaysAgo(14);
+    const params = adapter.buildQuery(dateStr);
+    const url = `https://${adapter.domain}/resource/${adapter.datasetId}.json?${params}`;
+
+    const res = await fetch(url, {
       headers: { Accept: "application/json" },
       next: { revalidate: 3600 },
     });
 
-    if (!res.ok) {
-      return NextResponse.json([], { status: 200 });
-    }
+    if (!res.ok) return NextResponse.json([], { status: 200 });
 
-    const records: SodaRecord[] = await res.json();
+    const records: Record<string, string>[] = await res.json();
 
     const permits: Permit[] = records
-      .filter((r) => isCommercial(r as unknown as Record<string, string>))
-      .map((record, idx): Permit => {
-        const address = [
-          record.street_number,
-          record.street_direction,
-          record.street_name,
-          record.suffix,
-        ]
-          .filter(Boolean)
-          .join(" ");
-
-        const description =
-          record.work_description || record._description || "Commercial construction work";
-        const value = parseFloat(record.reported_cost || record.estimated_cost || "0");
-        const gcName = extractGCName(record as unknown as Record<string, string>);
-
-        let confidence: ContactConfidence = "Low";
-        if (gcName !== "Unknown Contractor") {
-          confidence = record.contractor_1_name ? "High" : "Medium";
-        }
-
-        return {
-          id: `live-${record.id || idx}`,
-          permitNumber: record.permit_ || `CHI-${idx}`,
-          address,
-          city: "Chicago",
-          state: "IL",
-          zip: record.contact_1_zipcode || "60601",
-          latitude: parseFloat(record.latitude || "41.8781"),
-          longitude: parseFloat(record.longitude || "-87.6298"),
-          filingDate: record.issue_date
-            ? record.issue_date.split("T")[0]
-            : new Date().toISOString().split("T")[0],
-          description,
-          estimatedValue: value,
-          status: mapStatus(record.permit_status),
-          trades: classifyTrades(description),
-          gcContact: {
-            companyName: gcName,
-            contactName: null,
-            phone: null,
-            email: null,
-            confidence,
-          },
-          source: "data.cityofchicago.org",
-          sourceUpdatedAt: new Date().toISOString().split("T")[0],
-        };
-      })
+      .map((r, i) => adapter.toPermit(r, i))
+      .filter((p): p is Permit => p !== null)
       .slice(0, 50);
 
     return NextResponse.json(permits);

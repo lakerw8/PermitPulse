@@ -144,7 +144,7 @@ export default function PricingPage() {
             },
             {
               q: "What cities do you cover?",
-              a: "We're launching with Chicago, IL. We plan to expand to Austin, Denver, Phoenix, Seattle, and San Francisco in the coming months.",
+              a: "We currently cover Chicago, Austin, San Francisco, Seattle, and New York City — all sourced from official municipal open data portals. More cities coming soon.",
             },
           ].map((item) => (
             <div key={item.q}>

@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const newUser: User = {
       email,
       plan: "free",
-      metro: "Chicago, IL",
+      metro: "chicago",
       primaryTrade: null,
       trialEndsAt: null,
       createdAt: new Date().toISOString(),

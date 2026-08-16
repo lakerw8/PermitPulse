@@ -34,7 +34,7 @@ import { useAuth, type Plan } from "@/lib/auth-context";
 import { useLeads } from "@/lib/leads-context";
 import { usePermits } from "@/lib/permits-context";
 import { formatCurrency } from "@/lib/mock-data";
-import { TRADES, type LeadStatus, type Trade } from "@/lib/types";
+import { TRADES, METROS, type LeadStatus, type Trade } from "@/lib/types";
 
 const STATUS_OPTIONS: { value: LeadStatus; label: string; color: string }[] = [
   { value: "Saved", label: "Saved", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" },
@@ -384,8 +384,18 @@ export default function DashboardPage() {
                 <h3 className="text-sm font-semibold">Preferences</h3>
                 <div className="mt-3 space-y-3">
                   <div>
-                    <label className="text-xs text-muted-foreground">Metro</label>
-                    <p className="text-sm font-medium">{user.metro}</p>
+                    <label className="mb-1 block text-xs text-muted-foreground">Metro</label>
+                    <select
+                      value={user.metro}
+                      onChange={(e) => updateUser({ metro: e.target.value })}
+                      className="w-full rounded-md border bg-background px-3 py-1.5 text-sm"
+                    >
+                      {METROS.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="mb-1 block text-xs text-muted-foreground">
@@ -419,7 +429,7 @@ export default function DashboardPage() {
                   <h3 className="text-sm font-semibold">Email Digest</h3>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Weekly digest for {user.metro}
+                  Weekly digest for {METROS.find((m) => m.id === user.metro)?.label || user.metro}
                   {user.primaryTrade && ` · ${user.primaryTrade}`}
                 </p>
                 {!isPaid && (
