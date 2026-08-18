@@ -13,7 +13,8 @@ import {
 import { CityMultiSelect } from "@/components/city-multi-select";
 import { usePermits } from "@/lib/permits-context";
 import { Trade, PermitStatus, METROS } from "@/lib/types";
-import { RefreshCw, Radio, Database } from "lucide-react";
+import { RefreshCw, Radio, Database, Search, SlidersHorizontal } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PermitsPage() {
   const {
@@ -34,6 +35,7 @@ export default function PermitsPage() {
   const [valueRange, setValueRange] = useState<ValueRange | null>(null);
   const [selectedStatuses, setSelectedStatuses] = useState<PermitStatus[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const metroLabel =
     metros.length === 0 || metros.length === METROS.length
@@ -88,6 +90,14 @@ export default function PermitsPage() {
 
     return results;
   }, [permits, search, selectedTrades, valueRange, selectedStatuses, sortBy, daysBack]);
+
+  const activeFilterCount =
+    (search ? 1 : 0) +
+    selectedTrades.length +
+    (valueRange ? 1 : 0) +
+    selectedStatuses.length +
+    (sortBy !== "newest" ? 1 : 0) +
+    (daysBack !== "30" ? 1 : 0);
 
   function clearAllFilters() {
     setSearch("");
@@ -166,8 +176,25 @@ export default function PermitsPage() {
         </div>
       )}
 
+      <div className="mb-3 lg:hidden">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 rounded-full text-xs"
+          onClick={() => setFiltersOpen(!filtersOpen)}
+        >
+          <SlidersHorizontal className="mr-1.5 h-3.5 w-3.5" />
+          Filters
+          {activeFilterCount > 0 && (
+            <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
+              {activeFilterCount}
+            </span>
+          )}
+        </Button>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
-        <aside className="rounded-lg border border-border p-4">
+        <aside className={`rounded-lg border border-border p-4 ${filtersOpen ? "block" : "hidden"} lg:block`}>
           <PermitFilters
             search={search}
             onSearchChange={setSearch}
@@ -187,18 +214,34 @@ export default function PermitsPage() {
 
         <div className="space-y-3">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16">
-              <RefreshCw className="mb-2 h-5 w-5 animate-spin text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Loading permits from {metroLabel}</p>
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="rounded-lg border border-border p-4 sm:p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1 space-y-2.5">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-full" />
+                      <div className="flex gap-2">
+                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-3 w-16" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-7 w-7 shrink-0 rounded-full" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border py-16">
-              <p className="text-sm text-muted-foreground">
-                No permits match your filters.
+              <Search className="mb-2 h-5 w-5 text-muted-foreground" />
+              <p className="text-sm font-medium text-foreground">No permits found</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Try adjusting your filters or switching cities
               </p>
               <button
                 onClick={clearAllFilters}
-                className="mt-2 text-sm font-medium text-primary transition-colors duration-200 hover:text-primary/80"
+                className="mt-3 text-sm font-medium text-primary transition-colors duration-200 hover:text-primary/80"
               >
                 Clear all filters
               </button>

@@ -29,6 +29,7 @@ interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
   signIn: (email: string) => Promise<{ error: string | null }>;
+  signInWithGoogle: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
   isTrialActive: boolean;
@@ -107,6 +108,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [supabase]
   );
 
+  const signInWithGoogle = useCallback(async (): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/callback`,
+      },
+    });
+    return { error: error?.message ?? null };
+  }, [supabase]);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -154,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, signIn, signOut, updateUser, isTrialActive, isPaid }}
+      value={{ user, isLoading, signIn, signInWithGoogle, signOut, updateUser, isTrialActive, isPaid }}
     >
       {children}
     </AuthContext.Provider>

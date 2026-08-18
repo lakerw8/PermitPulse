@@ -30,7 +30,8 @@ import {
   Check,
   RefreshCw,
 } from "lucide-react";
-import { useAuth, type Plan, type User } from "@/lib/auth-context";
+import { useAuth, type Plan } from "@/lib/auth-context";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useLeads } from "@/lib/leads-context";
 import { usePermits } from "@/lib/permits-context";
 import { formatCurrency } from "@/lib/mock-data";
@@ -62,7 +63,41 @@ export default function DashboardPage() {
     if (!isLoading && !user) router.replace("/login");
   }, [isLoading, user, router]);
 
-  if (isLoading || !user) return null;
+  if (isLoading || !user) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <div className="mb-6 flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-40" />
+            <Skeleton className="h-4 w-56" />
+          </div>
+          <Skeleton className="h-6 w-28 rounded-full" />
+        </div>
+        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-lg border p-3 text-center">
+              <Skeleton className="mx-auto h-6 w-8" />
+              <Skeleton className="mx-auto mt-1 h-3 w-14" />
+            </div>
+          ))}
+        </div>
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-lg border p-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-3 w-full" />
+                <div className="flex gap-2">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   const savedPermits = leads.map((lead) => ({
     lead,
