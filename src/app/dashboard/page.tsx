@@ -30,7 +30,7 @@ import {
   Check,
   RefreshCw,
 } from "lucide-react";
-import { useAuth, type Plan } from "@/lib/auth-context";
+import { useAuth, type Plan, type User } from "@/lib/auth-context";
 import { useLeads } from "@/lib/leads-context";
 import { usePermits } from "@/lib/permits-context";
 import { formatCurrency } from "@/lib/mock-data";

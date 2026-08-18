@@ -8,11 +8,14 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
+import { createClient } from "./supabase-browser";
 import type { Trade } from "./types";
 
 export type Plan = "free" | "starter" | "pro" | "growth";
 
 export interface User {
+  id: string;
   email: string;
   plan: Plan;
   metro: string;
@@ -24,8 +27,8 @@ export interface User {
 interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
-  login: (email: string) => void;
-  logout: () => void;
+  signIn: (email: string) => Promise<{ error: string | null }>;
+  signOut: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
   isTrialActive: boolean;
   isPaid: boolean;
@@ -33,50 +36,93 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const STORAGE_KEY = "permitpulse_user";
+const PREFS_KEY = "permitpulse_prefs";
+
+function loadPrefs(): Partial<User> {
+  try {
+    const stored = localStorage.getItem(PREFS_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+function savePrefs(prefs: Partial<User>) {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch {}
+}
+
+function mapSupabaseUser(su: SupabaseUser, prefs: Partial<User>): User {
+  return {
+    id: su.id,
+    email: su.email || "",
+    plan: prefs.plan ?? "free",
+    metro: prefs.metro ?? "chicago",
+    primaryTrade: prefs.primaryTrade ?? null,
+    trialEndsAt: prefs.trialEndsAt ?? null,
+    createdAt: su.created_at,
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [supabase] = useState(() => createClient());
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setUser(JSON.parse(stored));
+    const prefs = loadPrefs();
+
+    supabase.auth.getUser().then(({ data: { user: su } }) => {
+      if (su) {
+        setUser(mapSupabaseUser(su, prefs));
       }
-    } catch {}
-    setIsLoading(false);
-  }, []);
+      setIsLoading(false);
+    });
 
-  useEffect(() => {
-    if (!isLoading) {
-      if (user) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(mapSupabaseUser(session.user, loadPrefs()));
       } else {
-        localStorage.removeItem(STORAGE_KEY);
+        setUser(null);
       }
-    }
-  }, [user, isLoading]);
+    });
 
-  const login = useCallback((email: string) => {
-    const newUser: User = {
-      email,
-      plan: "free",
-      metro: "chicago",
-      primaryTrade: null,
-      trialEndsAt: null,
-      createdAt: new Date().toISOString(),
-    };
-    setUser(newUser);
-  }, []);
+    return () => subscription.unsubscribe();
+  }, [supabase]);
 
-  const logout = useCallback(() => {
+  const signIn = useCallback(
+    async (email: string): Promise<{ error: string | null }> => {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+        },
+      });
+      return { error: error?.message ?? null };
+    },
+    [supabase]
+  );
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
     setUser(null);
-  }, []);
+  }, [supabase]);
 
   const updateUser = useCallback((updates: Partial<User>) => {
-    setUser((prev) => (prev ? { ...prev, ...updates } : null));
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, ...updates };
+      savePrefs({
+        plan: updated.plan,
+        metro: updated.metro,
+        primaryTrade: updated.primaryTrade,
+        trialEndsAt: updated.trialEndsAt,
+      });
+      return updated;
+    });
   }, []);
 
   const isTrialActive =
@@ -87,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isLoading, login, logout, updateUser, isTrialActive, isPaid }}
+      value={{ user, isLoading, signIn, signOut, updateUser, isTrialActive, isPaid }}
     >
       {children}
     </AuthContext.Provider>

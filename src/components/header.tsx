@@ -22,7 +22,7 @@ const NAV_LINKS = [
 
 export function Header() {
   const [open, setOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 flex justify-center px-4 pt-3 sm:pt-4">
@@ -61,7 +61,7 @@ export function Header() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="text-destructive">
+                <DropdownMenuItem onClick={() => signOut()} className="text-destructive">
                   <LogOut className="mr-2 h-3.5 w-3.5" />
                   Log out
                 </DropdownMenuItem>
@@ -111,7 +111,7 @@ export function Header() {
                     Dashboard
                   </Link>
                   <button
-                    onClick={() => { logout(); setOpen(false); }}
+                    onClick={() => { signOut(); setOpen(false); }}
                     className="text-left text-sm text-destructive hover:text-destructive/80"
                   >
                     Log out
