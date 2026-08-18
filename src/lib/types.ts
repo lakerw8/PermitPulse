@@ -8,7 +8,7 @@ export interface Metro {
 export const METROS: Metro[] = [
   { id: "chicago", name: "Chicago", state: "IL", label: "Chicago, IL" },
   { id: "austin", name: "Austin", state: "TX", label: "Austin, TX" },
-  { id: "san-francisco", name: "San Francisco", state: "CA", label: "San Francisco, CA" },
+  { id: "sf-bay-area", name: "SF Bay Area", state: "CA", label: "SF Bay Area, CA" },
   { id: "seattle", name: "Seattle", state: "WA", label: "Seattle, WA" },
   { id: "new-york", name: "New York", state: "NY", label: "New York, NY" },
 ];
@@ -30,6 +30,13 @@ export type PermitStatus =
   | "Under Review"
   | "Approved"
   | "Completed";
+
+export const PERMIT_STATUSES: PermitStatus[] = [
+  "Issued",
+  "Under Review",
+  "Approved",
+  "Completed",
+];
 
 export type ContactConfidence = "High" | "Medium" | "Low";
 

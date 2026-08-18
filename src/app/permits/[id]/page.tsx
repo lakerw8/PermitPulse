@@ -95,7 +95,7 @@ export default function PermitDetailPage({
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold sm:text-2xl">{permit.address}</h1>
+              <h1 className="font-heading text-xl font-semibold tracking-tight sm:text-2xl">{permit.address}</h1>
               <Badge variant={STATUS_VARIANT[permit.status] ?? "outline"}>
                 {permit.status}
               </Badge>
@@ -228,7 +228,7 @@ export default function PermitDetailPage({
           </Card>
 
           {!isPaid && (
-            <Card className="gap-0 border-amber-200 bg-gradient-to-b from-amber-50 to-orange-50 py-0 dark:border-amber-800 dark:from-amber-950/30 dark:to-orange-950/20">
+            <Card className="gap-0 border-border bg-muted/30 py-0">
               <CardContent className="p-4 text-center">
                 <h3 className="text-sm font-semibold">Want to reach this GC?</h3>
                 <p className="mt-1 text-xs text-muted-foreground">

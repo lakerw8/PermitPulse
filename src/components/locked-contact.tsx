@@ -65,10 +65,10 @@ export function LockedContact({ contact, isUnlocked = false }: LockedContactProp
   }
 
   return (
-    <Card className="gap-0 border-amber-200 bg-amber-50/50 py-0 dark:border-amber-800 dark:bg-amber-950/20">
+    <Card className="gap-0 border-border bg-muted/30 py-0">
       <CardContent className="p-4 sm:p-5">
         <div className="mb-3 flex items-center gap-2">
-          <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+          <Lock className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold">General Contractor Contact</h3>
         </div>
 
@@ -101,11 +101,11 @@ export function LockedContact({ contact, isUnlocked = false }: LockedContactProp
           </div>
         </div>
 
-        <div className="mt-4 rounded-lg border border-amber-300 bg-white p-3 dark:border-amber-700 dark:bg-amber-950/50">
-          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+        <div className="mt-4 rounded-lg border border-border bg-background p-3">
+          <p className="text-sm font-medium">
             Unlock GC contact details to reach out before your competitors
           </p>
-          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+          <p className="mt-1 text-xs text-muted-foreground">
             Get the company name, contact person, phone, and email with a paid plan.
           </p>
           <div className="mt-3 flex gap-2">

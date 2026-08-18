@@ -132,8 +132,8 @@ export default function DashboardPage() {
 
           {/* Limit warning */}
           {!isPaid && (
-            <div className="mb-4 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 dark:border-amber-800 dark:bg-amber-950/30">
-              <span className="text-sm text-amber-800 dark:text-amber-200">
+            <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-muted/50 px-4 py-2.5 dark:border-border">
+              <span className="text-sm text-foreground">
                 {leads.length}/15 leads saved (free account limit)
               </span>
               <Button size="sm" variant="outline" className="text-xs" onClick={handleStartTrial}>
@@ -260,7 +260,7 @@ export default function DashboardPage() {
                             )}
                           </div>
                         ) : (
-                          <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                          <div className="mt-2 flex items-center gap-1.5 text-xs text-primary">
                             <Lock className="h-3 w-3" />
                             <span>GC contact locked</span>
                             <span className="text-muted-foreground">&middot;</span>
@@ -433,7 +433,7 @@ export default function DashboardPage() {
                   {user.primaryTrade && ` · ${user.primaryTrade}`}
                 </p>
                 {!isPaid && (
-                  <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                  <p className="mt-2 text-xs text-primary">
                     GC contact details in digest require a paid plan
                   </p>
                 )}

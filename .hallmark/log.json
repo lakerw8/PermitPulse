@@ -1,0 +1,36 @@
+[
+  {
+    "timestamp": "2026-08-17T01:20:00Z",
+    "scope": "app",
+    "genre": "modern-minimal",
+    "theme": "Cobalt",
+    "macrostructures": {
+      "marketing": "Stat-Led",
+      "app": "Workbench"
+    },
+    "nav": "N5",
+    "footer": "Ft2",
+    "typography": {
+      "display": "Space Grotesk 600",
+      "body": "Geist 400",
+      "outlier": "Geist Mono 400"
+    },
+    "files_modified": [
+      "src/app/globals.css",
+      "src/app/layout.tsx",
+      "src/app/page.tsx",
+      "src/app/pricing/page.tsx",
+      "src/app/login/page.tsx",
+      "src/app/dashboard/page.tsx",
+      "src/app/permits/page.tsx",
+      "src/app/permits/[id]/page.tsx",
+      "src/components/header.tsx",
+      "src/components/footer.tsx",
+      "src/components/permit-card.tsx",
+      "src/components/permit-filters.tsx",
+      "src/components/locked-contact.tsx"
+    ],
+    "design_system": "design.md",
+    "pre_emit_critique": "P5 H4 E5 S5 R5 V4"
+  }
+]
