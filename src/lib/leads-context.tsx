@@ -8,6 +8,8 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import { createClient } from "./supabase-browser";
+import { useAuth } from "./auth-context";
 import type { LeadStatus, Permit } from "./types";
 
 export interface SavedLead {
@@ -20,7 +22,7 @@ export interface SavedLead {
 
 interface LeadsContextValue {
   leads: SavedLead[];
-  saveLead: (permitId: string) => boolean;
+  saveLead: (permitId: string) => Promise<boolean>;
   removeLead: (permitId: string) => void;
   updateLeadStatus: (permitId: string, status: LeadStatus) => void;
   updateLeadNotes: (permitId: string, notes: string) => void;
@@ -32,76 +34,131 @@ interface LeadsContextValue {
 
 const LeadsContext = createContext<LeadsContextValue | null>(null);
 
-const STORAGE_KEY = "permitpulse_leads";
 const FREE_LIMIT = 15;
+
+interface DbLead {
+  permit_id: string;
+  status: string;
+  notes: string;
+  saved_at: string;
+  updated_at: string;
+}
+
+function dbToLead(row: DbLead): SavedLead {
+  return {
+    permitId: row.permit_id,
+    status: row.status as LeadStatus,
+    notes: row.notes,
+    savedAt: row.saved_at,
+    updatedAt: row.updated_at,
+  };
+}
 
 export function LeadsProvider({ children }: { children: ReactNode }) {
   const [leads, setLeads] = useState<SavedLead[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const { user } = useAuth();
+  const [supabase] = useState(() => createClient());
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setLeads(JSON.parse(stored));
-      }
-    } catch {}
-    setLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (loaded) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
+    if (!user) {
+      setLeads([]);
+      setLoaded(true);
+      return;
     }
-  }, [leads, loaded]);
+
+    supabase
+      .from("saved_leads")
+      .select("permit_id, status, notes, saved_at, updated_at")
+      .eq("user_id", user.id)
+      .order("saved_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) {
+          setLeads(data.map(dbToLead));
+        }
+        setLoaded(true);
+      });
+  }, [user, supabase]);
 
   const saveLead = useCallback(
-    (permitId: string): boolean => {
+    async (permitId: string): Promise<boolean> => {
       if (leads.some((l) => l.permitId === permitId)) return false;
+      if (!user) return false;
+
       const now = new Date().toISOString();
+      const { error } = await supabase.from("saved_leads").insert({
+        user_id: user.id,
+        permit_id: permitId,
+        status: "Saved",
+        notes: "",
+        saved_at: now,
+        updated_at: now,
+      });
+
+      if (error) return false;
+
       setLeads((prev) => [
+        { permitId, status: "Saved", notes: "", savedAt: now, updatedAt: now },
         ...prev,
-        {
-          permitId,
-          status: "Saved",
-          notes: "",
-          savedAt: now,
-          updatedAt: now,
-        },
       ]);
       return true;
     },
-    [leads]
+    [leads, user, supabase]
   );
 
-  const removeLead = useCallback((permitId: string) => {
-    setLeads((prev) => prev.filter((l) => l.permitId !== permitId));
-  }, []);
+  const removeLead = useCallback(
+    (permitId: string) => {
+      setLeads((prev) => prev.filter((l) => l.permitId !== permitId));
+      if (user) {
+        supabase
+          .from("saved_leads")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("permit_id", permitId)
+          .then(() => {});
+      }
+    },
+    [user, supabase]
+  );
 
   const updateLeadStatus = useCallback(
     (permitId: string, status: LeadStatus) => {
+      const now = new Date().toISOString();
       setLeads((prev) =>
         prev.map((l) =>
-          l.permitId === permitId
-            ? { ...l, status, updatedAt: new Date().toISOString() }
-            : l
+          l.permitId === permitId ? { ...l, status, updatedAt: now } : l
         )
       );
+      if (user) {
+        supabase
+          .from("saved_leads")
+          .update({ status, updated_at: now })
+          .eq("user_id", user.id)
+          .eq("permit_id", permitId)
+          .then(() => {});
+      }
     },
-    []
+    [user, supabase]
   );
 
   const updateLeadNotes = useCallback(
     (permitId: string, notes: string) => {
+      const now = new Date().toISOString();
       setLeads((prev) =>
         prev.map((l) =>
-          l.permitId === permitId
-            ? { ...l, notes, updatedAt: new Date().toISOString() }
-            : l
+          l.permitId === permitId ? { ...l, notes, updatedAt: now } : l
         )
       );
+      if (user) {
+        supabase
+          .from("saved_leads")
+          .update({ notes, updated_at: now })
+          .eq("user_id", user.id)
+          .eq("permit_id", permitId)
+          .then(() => {});
+      }
     },
-    []
+    [user, supabase]
   );
 
   const isLeadSaved = useCallback(

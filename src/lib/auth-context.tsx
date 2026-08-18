@@ -6,9 +6,10 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
+import type { User as SupabaseUser, SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "./supabase-browser";
 import type { Trade } from "./types";
 
@@ -36,31 +37,30 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const PREFS_KEY = "permitpulse_prefs";
-
-function loadPrefs(): Partial<User> {
-  try {
-    const stored = localStorage.getItem(PREFS_KEY);
-    return stored ? JSON.parse(stored) : {};
-  } catch {
-    return {};
-  }
+interface ProfileRow {
+  plan: string;
+  metro: string;
+  primary_trade: string | null;
+  trial_ends_at: string | null;
 }
 
-function savePrefs(prefs: Partial<User>) {
-  try {
-    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
-  } catch {}
+async function fetchProfile(supabase: SupabaseClient, userId: string): Promise<ProfileRow | null> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("plan, metro, primary_trade, trial_ends_at")
+    .eq("id", userId)
+    .single();
+  return data;
 }
 
-function mapSupabaseUser(su: SupabaseUser, prefs: Partial<User>): User {
+function mapToUser(su: SupabaseUser, profile: ProfileRow | null): User {
   return {
     id: su.id,
     email: su.email || "",
-    plan: prefs.plan ?? "free",
-    metro: prefs.metro ?? "chicago",
-    primaryTrade: prefs.primaryTrade ?? null,
-    trialEndsAt: prefs.trialEndsAt ?? null,
+    plan: (profile?.plan as Plan) ?? "free",
+    metro: profile?.metro ?? "chicago",
+    primaryTrade: (profile?.primary_trade as Trade) ?? null,
+    trialEndsAt: profile?.trial_ends_at ?? null,
     createdAt: su.created_at,
   };
 }
@@ -69,22 +69,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [supabase] = useState(() => createClient());
+  const savingRef = useRef(false);
 
   useEffect(() => {
-    const prefs = loadPrefs();
-
-    supabase.auth.getUser().then(({ data: { user: su } }) => {
+    supabase.auth.getUser().then(async ({ data: { user: su } }) => {
       if (su) {
-        setUser(mapSupabaseUser(su, prefs));
+        const profile = await fetchProfile(supabase, su.id);
+        setUser(mapToUser(su, profile));
       }
       setIsLoading(false);
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
-        setUser(mapSupabaseUser(session.user, loadPrefs()));
+        const profile = await fetchProfile(supabase, session.user.id);
+        setUser(mapToUser(session.user, profile));
       } else {
         setUser(null);
       }
@@ -111,19 +112,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, [supabase]);
 
-  const updateUser = useCallback((updates: Partial<User>) => {
-    setUser((prev) => {
-      if (!prev) return null;
-      const updated = { ...prev, ...updates };
-      savePrefs({
-        plan: updated.plan,
-        metro: updated.metro,
-        primaryTrade: updated.primaryTrade,
-        trialEndsAt: updated.trialEndsAt,
+  const updateUser = useCallback(
+    (updates: Partial<User>) => {
+      setUser((prev) => {
+        if (!prev) return null;
+        const updated = { ...prev, ...updates };
+
+        if (!savingRef.current) {
+          savingRef.current = true;
+          const dbUpdates: Record<string, unknown> = {};
+          if ("plan" in updates) dbUpdates.plan = updates.plan;
+          if ("metro" in updates) dbUpdates.metro = updates.metro;
+          if ("primaryTrade" in updates) dbUpdates.primary_trade = updates.primaryTrade;
+          if ("trialEndsAt" in updates) dbUpdates.trial_ends_at = updates.trialEndsAt;
+
+          if (Object.keys(dbUpdates).length > 0) {
+            dbUpdates.updated_at = new Date().toISOString();
+            supabase
+              .from("profiles")
+              .update(dbUpdates)
+              .eq("id", prev.id)
+              .then(() => {
+                savingRef.current = false;
+              });
+          } else {
+            savingRef.current = false;
+          }
+        }
+
+        return updated;
       });
-      return updated;
-    });
-  }, []);
+    },
+    [supabase]
+  );
 
   const isTrialActive =
     !!user?.trialEndsAt && new Date(user.trialEndsAt) > new Date();
