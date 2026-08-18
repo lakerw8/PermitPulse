@@ -174,6 +174,9 @@ const sanFrancisco: CityAdapter = {
     if (isLikelyResidential(desc)) return null;
     const value = parseFloat(r.estimated_cost || r.revised_cost || "0");
     const address = [r.street_number, r.street_name, r.street_suffix].filter(Boolean).join(" ");
+    const loc = r.location as unknown as { latitude?: string; longitude?: string } | string | undefined;
+    const lat = (typeof loc === "object" && loc?.latitude) || r.latitude || "37.7749";
+    const lng = (typeof loc === "object" && loc?.longitude) || r.longitude || "-122.4194";
     return {
       id: `sf-${r.permit_number || `unknown-${idx}`}`,
       permitNumber: r.permit_number || `SF-${idx}`,
@@ -181,8 +184,8 @@ const sanFrancisco: CityAdapter = {
       city: "San Francisco",
       state: "CA",
       zip: r.zipcode || "94102",
-      latitude: parseFloat(r.location?.latitude || r.latitude || "37.7749"),
-      longitude: parseFloat(r.location?.longitude || r.longitude || "-122.4194"),
+      latitude: parseFloat(lat),
+      longitude: parseFloat(lng),
       filingDate: r.issued_date?.split("T")[0] || r.filed_date?.split("T")[0] || dateNDaysAgo(0),
       description: desc || "Commercial construction work",
       estimatedValue: value,
