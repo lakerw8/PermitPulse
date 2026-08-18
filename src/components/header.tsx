@@ -18,6 +18,7 @@ import { useAuth } from "@/lib/auth-context";
 const NAV_LINKS = [
   { href: "/permits", label: "Browse" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/blog", label: "Blog" },
 ];
 
 export function Header() {

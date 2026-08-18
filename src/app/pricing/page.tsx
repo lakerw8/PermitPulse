@@ -1,6 +1,24 @@
 /* Hallmark · genre: modern-minimal · macrostructure: Stat-Led · design-system: design.md · designed-as-app */
 
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description:
+    "Simple, transparent pricing for PermitPulse. Get commercial building permit leads with GC contact details starting at $199/mo. 7-day free trial, no credit card required.",
+  openGraph: {
+    title: "Pricing | PermitPulse",
+    description:
+      "Simple, transparent pricing for PermitPulse. Get commercial building permit leads with GC contact details starting at $199/mo. 7-day free trial, no credit card required.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pricing | PermitPulse",
+    description:
+      "Get commercial building permit leads with GC contacts starting at $199/mo. 7-day free trial.",
+  },
+};
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Check, ArrowRight } from "lucide-react";
