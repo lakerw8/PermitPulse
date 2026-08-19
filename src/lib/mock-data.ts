@@ -6,6 +6,29 @@ function daysAgo(n: number): string {
   return d.toISOString().split("T")[0];
 }
 
+const DATE_OFFSETS: Array<{ filingDaysAgo: number; updatedDaysAgo: number }> = [
+  { filingDaysAgo: 1, updatedDaysAgo: 1 },
+  { filingDaysAgo: 2, updatedDaysAgo: 1 },
+  { filingDaysAgo: 3, updatedDaysAgo: 2 },
+  { filingDaysAgo: 3, updatedDaysAgo: 3 },
+  { filingDaysAgo: 4, updatedDaysAgo: 3 },
+  { filingDaysAgo: 5, updatedDaysAgo: 4 },
+  { filingDaysAgo: 5, updatedDaysAgo: 5 },
+  { filingDaysAgo: 6, updatedDaysAgo: 5 },
+  { filingDaysAgo: 7, updatedDaysAgo: 6 },
+  { filingDaysAgo: 7, updatedDaysAgo: 7 },
+  { filingDaysAgo: 8, updatedDaysAgo: 7 },
+  { filingDaysAgo: 9, updatedDaysAgo: 8 },
+  { filingDaysAgo: 9, updatedDaysAgo: 9 },
+  { filingDaysAgo: 10, updatedDaysAgo: 9 },
+  { filingDaysAgo: 11, updatedDaysAgo: 10 },
+  { filingDaysAgo: 12, updatedDaysAgo: 11 },
+  { filingDaysAgo: 12, updatedDaysAgo: 12 },
+  { filingDaysAgo: 13, updatedDaysAgo: 12 },
+  { filingDaysAgo: 13, updatedDaysAgo: 13 },
+  { filingDaysAgo: 14, updatedDaysAgo: 13 },
+];
+
 export const MOCK_PERMITS: Permit[] = [
   {
     id: "p-001",
@@ -16,7 +39,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60606",
     latitude: 41.8789,
     longitude: -87.6359,
-    filingDate: daysAgo(1),
+    filingDate: "2026-08-18",
     description:
       "Complete HVAC system replacement for floors 12-18 of commercial office tower. Includes new rooftop units, ductwork, and building automation controls.",
     estimatedValue: 2850000,
@@ -30,7 +53,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "High",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(1),
+    sourceUpdatedAt: "2026-08-18",
   },
   {
     id: "p-002",
@@ -41,7 +64,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60611",
     latitude: 41.8902,
     longitude: -87.6238,
-    filingDate: daysAgo(2),
+    filingDate: "2026-08-17",
     description:
       "Electrical service upgrade and panel replacement for 15-story mixed-use building. New 4000A main switchgear, emergency generator, and fire alarm system.",
     estimatedValue: 1750000,
@@ -55,7 +78,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "High",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(1),
+    sourceUpdatedAt: "2026-08-18",
   },
   {
     id: "p-003",
@@ -66,7 +89,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60602",
     latitude: 41.8819,
     longitude: -87.6278,
-    filingDate: daysAgo(3),
+    filingDate: "2026-08-16",
     description:
       "Interior buildout of new medical office space, 22,000 SF. Includes plumbing rough-in for exam rooms, specialized HVAC for clean rooms, and glass partition walls.",
     estimatedValue: 3200000,
@@ -80,7 +103,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "High",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(2),
+    sourceUpdatedAt: "2026-08-17",
   },
   {
     id: "p-004",
@@ -91,7 +114,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60661",
     latitude: 41.8793,
     longitude: -87.6418,
-    filingDate: daysAgo(3),
+    filingDate: "2026-08-16",
     description:
       "Complete roof replacement on 8-story commercial building. TPO membrane system, new insulation, and parapet wall repairs.",
     estimatedValue: 890000,
@@ -105,7 +128,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "Medium",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(3),
+    sourceUpdatedAt: "2026-08-16",
   },
   {
     id: "p-005",
@@ -116,7 +139,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60601",
     latitude: 41.8843,
     longitude: -87.6311,
-    filingDate: daysAgo(4),
+    filingDate: "2026-08-15",
     description:
       "Fire suppression system upgrade for county building. New sprinkler heads, standpipe system, and fire pump replacement.",
     estimatedValue: 1200000,
@@ -130,7 +153,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "High",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(3),
+    sourceUpdatedAt: "2026-08-16",
   },
   {
     id: "p-006",
@@ -141,7 +164,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60606",
     latitude: 41.8847,
     longitude: -87.6347,
-    filingDate: daysAgo(5),
+    filingDate: "2026-08-14",
     description:
       "New restaurant buildout in ground floor commercial space. Full kitchen hood and HVAC, grease trap plumbing, electrical for commercial kitchen equipment.",
     estimatedValue: 680000,
@@ -155,7 +178,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "High",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(4),
+    sourceUpdatedAt: "2026-08-15",
   },
   {
     id: "p-007",
@@ -166,7 +189,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60606",
     latitude: 41.8779,
     longitude: -87.6363,
-    filingDate: daysAgo(5),
+    filingDate: "2026-08-14",
     description:
       "Structural steel reinforcement for mechanical penthouse. Adding new cooling tower support structure and equipment platforms.",
     estimatedValue: 1450000,
@@ -180,7 +203,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "Medium",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(5),
+    sourceUpdatedAt: "2026-08-14",
   },
   {
     id: "p-008",
@@ -191,7 +214,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60611",
     latitude: 41.8882,
     longitude: -87.6268,
-    filingDate: daysAgo(6),
+    filingDate: "2026-08-13",
     description:
       "Curtain wall glass replacement on south and west facades. Approximately 4,200 SF of insulated glazing units.",
     estimatedValue: 2100000,
@@ -205,7 +228,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "High",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(5),
+    sourceUpdatedAt: "2026-08-14",
   },
   {
     id: "p-009",
@@ -216,7 +239,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60601",
     latitude: 41.8867,
     longitude: -87.6316,
-    filingDate: daysAgo(7),
+    filingDate: "2026-08-12",
     description:
       "Demolition of interior partitions and ceilings floors 4-6 for tenant improvement. Includes hazmat abatement and structural modifications.",
     estimatedValue: 520000,
@@ -230,7 +253,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "Low",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(6),
+    sourceUpdatedAt: "2026-08-13",
   },
   {
     id: "p-010",
@@ -241,7 +264,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60661",
     latitude: 41.8804,
     longitude: -87.6395,
-    filingDate: daysAgo(7),
+    filingDate: "2026-08-12",
     description:
       "New concrete parking structure, 4 levels, approximately 320 spaces. Includes electrical for EV charging stations and fire suppression throughout.",
     estimatedValue: 8500000,
@@ -255,7 +278,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "High",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(7),
+    sourceUpdatedAt: "2026-08-12",
   },
   {
     id: "p-011",
@@ -266,7 +289,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60601",
     latitude: 41.8851,
     longitude: -87.6216,
-    filingDate: daysAgo(8),
+    filingDate: "2026-08-11",
     description:
       "Plumbing renovation for hotel floors 8-14. Replace domestic water risers, waste stacks, and fixture rough-in for 120 guest rooms.",
     estimatedValue: 1680000,
@@ -280,7 +303,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "High",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(7),
+    sourceUpdatedAt: "2026-08-12",
   },
   {
     id: "p-012",
@@ -291,7 +314,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60611",
     latitude: 41.8912,
     longitude: -87.6244,
-    filingDate: daysAgo(9),
+    filingDate: "2026-08-10",
     description:
       "Rooftop solar panel installation and electrical tie-in for 20-story office building. 280kW system with inverters and monitoring.",
     estimatedValue: 950000,
@@ -305,7 +328,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "Medium",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(8),
+    sourceUpdatedAt: "2026-08-11",
   },
   {
     id: "p-013",
@@ -316,7 +339,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60606",
     latitude: 41.8843,
     longitude: -87.6355,
-    filingDate: daysAgo(9),
+    filingDate: "2026-08-10",
     description:
       "New ground-floor retail buildout, 8,500 SF. Complete mechanical, electrical, and plumbing. Storefront glass installation.",
     estimatedValue: 1100000,
@@ -330,7 +353,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "High",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(9),
+    sourceUpdatedAt: "2026-08-10",
   },
   {
     id: "p-014",
@@ -341,7 +364,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60601",
     latitude: 41.8857,
     longitude: -87.6218,
-    filingDate: daysAgo(10),
+    filingDate: "2026-08-09",
     description:
       "Emergency generator replacement and transfer switch upgrade. 2000kW diesel generator with fuel storage and exhaust system.",
     estimatedValue: 780000,
@@ -355,7 +378,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "Medium",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(9),
+    sourceUpdatedAt: "2026-08-10",
   },
   {
     id: "p-015",
@@ -366,7 +389,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60654",
     latitude: 41.8887,
     longitude: -87.6311,
-    filingDate: daysAgo(11),
+    filingDate: "2026-08-08",
     description:
       "Full-building fire alarm system replacement. New addressable panels, notification appliances, and duct detectors for 25-story office tower.",
     estimatedValue: 920000,
@@ -380,7 +403,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "High",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(10),
+    sourceUpdatedAt: "2026-08-09",
   },
   {
     id: "p-016",
@@ -391,7 +414,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60603",
     latitude: 41.8817,
     longitude: -87.6322,
-    filingDate: daysAgo(12),
+    filingDate: "2026-08-07",
     description:
       "Lobby renovation and new revolving door installation. Includes structural modifications, new marble flooring, and glass entry vestibule.",
     estimatedValue: 1350000,
@@ -405,7 +428,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "High",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(11),
+    sourceUpdatedAt: "2026-08-08",
   },
   {
     id: "p-017",
@@ -416,7 +439,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60654",
     latitude: 41.8965,
     longitude: -87.6445,
-    filingDate: daysAgo(12),
+    filingDate: "2026-08-07",
     description:
       "Warehouse-to-office conversion, 45,000 SF. New HVAC systems, complete electrical distribution, plumbing for restrooms and break rooms, and sprinkler system.",
     estimatedValue: 6200000,
@@ -430,7 +453,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "High",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(12),
+    sourceUpdatedAt: "2026-08-07",
   },
   {
     id: "p-018",
@@ -441,7 +464,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60611",
     latitude: 41.8987,
     longitude: -87.6239,
-    filingDate: daysAgo(13),
+    filingDate: "2026-08-06",
     description:
       "Concrete repair and waterproofing for below-grade parking levels. Structural crack injection, membrane application, and sump pump replacement.",
     estimatedValue: 440000,
@@ -455,7 +478,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "Low",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(12),
+    sourceUpdatedAt: "2026-08-07",
   },
   {
     id: "p-019",
@@ -466,7 +489,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60654",
     latitude: 41.8883,
     longitude: -87.6312,
-    filingDate: daysAgo(13),
+    filingDate: "2026-08-06",
     description:
       "Data center buildout, 12,000 SF. Precision cooling, redundant electrical systems, raised floor, and fire suppression (clean agent).",
     estimatedValue: 4800000,
@@ -480,7 +503,7 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "High",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(13),
+    sourceUpdatedAt: "2026-08-06",
   },
   {
     id: "p-020",
@@ -491,7 +514,7 @@ export const MOCK_PERMITS: Permit[] = [
     zip: "60603",
     latitude: 41.8801,
     longitude: -87.6245,
-    filingDate: daysAgo(14),
+    filingDate: "2026-08-05",
     description:
       "Historic window replacement program, 450 windows. Custom-fabricated insulated glass units matching original profiles.",
     estimatedValue: 1900000,
@@ -505,9 +528,17 @@ export const MOCK_PERMITS: Permit[] = [
       confidence: "Medium",
     },
     source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(13),
+    sourceUpdatedAt: "2026-08-06",
   },
 ];
+
+export function refreshMockPermitDates(): Permit[] {
+  return MOCK_PERMITS.map((permit, i) => ({
+    ...permit,
+    filingDate: daysAgo(DATE_OFFSETS[i].filingDaysAgo),
+    sourceUpdatedAt: daysAgo(DATE_OFFSETS[i].updatedDaysAgo),
+  }));
+}
 
 export function formatCurrency(value: number): string {
   if (value >= 1_000_000) {

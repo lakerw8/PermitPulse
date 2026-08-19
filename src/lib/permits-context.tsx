@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Permit } from "./types";
-import { MOCK_PERMITS } from "./mock-data";
+import { MOCK_PERMITS, refreshMockPermitDates } from "./mock-data";
 
 interface PermitsContextValue {
   permits: Permit[];
@@ -37,6 +37,7 @@ export function PermitsProvider({ children }: { children: ReactNode }) {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   useEffect(() => {
+    setPermits(refreshMockPermitDates());
     setLastUpdated(new Date());
   }, []);
 
@@ -48,7 +49,7 @@ export function PermitsProvider({ children }: { children: ReactNode }) {
       const res = await fetch(`/api/permits?metros=${metrosParam}&days=${days}`);
       if (!res.ok) throw new Error("Failed to fetch permits");
       const data: Permit[] = await res.json();
-      setPermits(data.length > 0 ? data : MOCK_PERMITS);
+      setPermits(data.length > 0 ? data : refreshMockPermitDates());
       setLastUpdated(new Date());
       if (data.length === 0) {
         setError("No live data available, showing sample permits");
@@ -56,7 +57,7 @@ export function PermitsProvider({ children }: { children: ReactNode }) {
       }
     } catch {
       setError("Could not load live data, showing sample permits");
-      setPermits(MOCK_PERMITS);
+      setPermits(refreshMockPermitDates());
       setDataSource("mock");
     } finally {
       setIsLoading(false);
@@ -67,7 +68,7 @@ export function PermitsProvider({ children }: { children: ReactNode }) {
     if (dataSource === "live") {
       await fetchLivePermits(metros, daysBack);
     } else {
-      setPermits(MOCK_PERMITS);
+      setPermits(refreshMockPermitDates());
       setLastUpdated(new Date());
     }
   }, [dataSource, metros, daysBack, fetchLivePermits]);
@@ -76,7 +77,7 @@ export function PermitsProvider({ children }: { children: ReactNode }) {
     if (dataSource === "live") {
       fetchLivePermits(metros, daysBack);
     } else {
-      setPermits(MOCK_PERMITS);
+      setPermits(refreshMockPermitDates());
       setLastUpdated(new Date());
       setError(null);
     }
