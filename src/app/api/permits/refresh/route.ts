@@ -6,7 +6,7 @@ import {
   dateNDaysAgo,
 } from "@/lib/permit-adapters";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 function authorize(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET;
@@ -24,14 +24,13 @@ async function handleRefresh(request: NextRequest) {
     ? metrosParam.split(",").filter(Boolean)
     : Object.keys(METRO_ADAPTERS);
 
-  const results: Record<string, { count: number; status: string; error?: string }> = {};
+  const dateStr = dateNDaysAgo(90);
 
-  for (const metroId of metroIds) {
+  async function refreshMetro(metroId: string): Promise<{ count: number; status: string; error?: string }> {
     const adapters = METRO_ADAPTERS[metroId];
-    if (!adapters) continue;
+    if (!adapters) return { count: 0, status: "skipped" };
 
     try {
-      const dateStr = dateNDaysAgo(90);
       const fetchResults = await Promise.allSettled(
         adapters.map((adapter) => fetchAdapter(adapter, dateStr))
       );
@@ -93,7 +92,7 @@ async function handleRefresh(request: NextRequest) {
         error_message: null,
       });
 
-      results[metroId] = { count: permits.length, status: "success" };
+      return { count: permits.length, status: "success" };
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : typeof err === "object" && err !== null && "message" in err ? String((err as { message: unknown }).message) : JSON.stringify(err);
       await supabaseAdmin.from("refresh_log").upsert({
@@ -103,7 +102,19 @@ async function handleRefresh(request: NextRequest) {
         status: "error",
         error_message: errorMsg,
       });
-      results[metroId] = { count: 0, status: "error", error: errorMsg };
+      return { count: 0, status: "error", error: errorMsg };
+    }
+  }
+
+  const BATCH_SIZE = 5;
+  const results: Record<string, { count: number; status: string; error?: string }> = {};
+  for (let i = 0; i < metroIds.length; i += BATCH_SIZE) {
+    const batch = metroIds.slice(i, i + BATCH_SIZE);
+    const batchResults = await Promise.all(
+      batch.map(async (id) => ({ id, result: await refreshMetro(id) }))
+    );
+    for (const { id, result } of batchResults) {
+      results[id] = result;
     }
   }
 

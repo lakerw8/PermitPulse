@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PermitCard } from "@/components/permit-card";
 import { usePermits } from "@/lib/permits-context";
 import { formatCurrency } from "@/lib/mock-data";
+import { METROS } from "@/lib/types";
 import { ArrowRight } from "lucide-react";
 
 export default function HomePage() {
@@ -25,7 +26,7 @@ export default function HomePage() {
               {permits.length}
             </div>
             <p className="mt-2 font-heading text-xl font-medium tracking-tight text-foreground sm:text-2xl">
-              commercial permits tracked across 5 metros.
+              commercial permits tracked across {METROS.length} metros.
             </p>
           </div>
           <div className="max-w-lg">
@@ -62,7 +63,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 divide-x divide-border sm:grid-cols-4">
             {[
               { value: `$${(totalValue / 1_000_000).toFixed(0)}M+`, label: "Total project value" },
-              { value: "5", label: "Metros covered" },
+              { value: String(METROS.length), label: "Metros covered" },
               { value: "10", label: "Trade categories" },
               { value: "Daily", label: "Data refresh" },
             ].map((stat) => (
@@ -91,7 +92,7 @@ export default function HomePage() {
                 Latest filings
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Commercial permits from Chicago, Austin, the SF Bay Area, Seattle, and NYC.
+                Commercial permits from {METROS.length} metro areas including Chicago, LA, NYC, and more.
               </p>
               <Link
                 href="/permits"

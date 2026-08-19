@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PermitCard } from "@/components/permit-card";
 import {
@@ -13,7 +12,7 @@ import {
 import { CityMultiSelect } from "@/components/city-multi-select";
 import { usePermits } from "@/lib/permits-context";
 import { Trade, PermitStatus, METROS } from "@/lib/types";
-import { RefreshCw, Radio, Database, Search, SlidersHorizontal } from "lucide-react";
+import { RefreshCw, Search, SlidersHorizontal } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PermitsPage() {
@@ -21,14 +20,13 @@ export default function PermitsPage() {
     permits,
     isLoading,
     error,
-    dataSource,
-    setDataSource,
     metros,
     setMetros,
     daysBack,
     setDaysBack,
     refresh,
     lastUpdated,
+    permitCount,
   } = usePermits();
   const [search, setSearch] = useState("");
   const [selectedTrades, setSelectedTrades] = useState<Trade[]>([]);
@@ -36,6 +34,7 @@ export default function PermitsPage() {
   const [selectedStatuses, setSelectedStatuses] = useState<PermitStatus[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(25);
 
   const metroLabel =
     metros.length === 0 || metros.length === METROS.length
@@ -91,6 +90,9 @@ export default function PermitsPage() {
     return results;
   }, [permits, search, selectedTrades, valueRange, selectedStatuses, sortBy, daysBack]);
 
+  const visiblePermits = filtered.slice(0, visibleCount);
+  const hasMore = visibleCount < filtered.length;
+
   const activeFilterCount =
     (search ? 1 : 0) +
     selectedTrades.length +
@@ -106,6 +108,7 @@ export default function PermitsPage() {
     setSelectedStatuses([]);
     setSortBy("newest");
     setDaysBack("30");
+    setVisibleCount(25);
   }
 
   return (
@@ -120,42 +123,16 @@ export default function PermitsPage() {
             <span className="text-sm text-muted-foreground tabular-nums">&middot; Last {daysBack} days</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-full border border-border p-0.5">
-            <button
-              onClick={() => setDataSource("mock")}
-              className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors duration-200 ${
-                dataSource === "mock"
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Database className="h-3 w-3" />
-              Sample
-            </button>
-            <button
-              onClick={() => setDataSource("live")}
-              className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors duration-200 ${
-                dataSource === "live"
-                  ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Radio className="h-3 w-3" />
-              Live API
-            </button>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 rounded-full text-xs"
-            onClick={() => refresh()}
-            disabled={isLoading}
-          >
-            <RefreshCw className={`mr-1 h-3 w-3 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 rounded-full text-xs"
+          onClick={() => refresh()}
+          disabled={isLoading}
+        >
+          <RefreshCw className={`mr-1 h-3 w-3 ${isLoading ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
       </div>
 
       {error && (
@@ -165,14 +142,10 @@ export default function PermitsPage() {
       )}
 
       {lastUpdated && (
-        <div className="mb-4 text-xs text-muted-foreground tabular-nums" suppressHydrationWarning>
-          Updated {lastUpdated.toLocaleTimeString()}
-          {dataSource === "live" && (
-            <Badge variant="outline" className="ml-2 text-xs">
-              <Radio className="mr-1 h-2 w-2 text-green-500" />
-              Live &middot; {metroLabel}
-            </Badge>
-          )}
+        <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground tabular-nums" suppressHydrationWarning>
+          <span>{permitCount.toLocaleString()} permits</span>
+          <span>&middot;</span>
+          <span>Updated {lastUpdated.toLocaleTimeString()}</span>
         </div>
       )}
 
@@ -247,9 +220,19 @@ export default function PermitsPage() {
               </button>
             </div>
           ) : (
-            filtered.map((permit) => (
-              <PermitCard key={permit.id} permit={permit} />
-            ))
+            <>
+              {visiblePermits.map((permit) => (
+                <PermitCard key={permit.id} permit={permit} />
+              ))}
+              {hasMore && (
+                <button
+                  onClick={() => setVisibleCount((c) => c + 25)}
+                  className="w-full rounded-lg border border-border py-3 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-muted hover:text-foreground"
+                >
+                  Show more ({filtered.length - visibleCount} remaining)
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
