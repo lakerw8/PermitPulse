@@ -132,11 +132,19 @@
   html {
     @apply font-sans antialiased;
     overflow-x: clip;
+    scroll-behavior: smooth;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
     font-style: normal;
     letter-spacing: -0.025em;
     line-height: 1.15;
+    text-wrap: balance;
+  }
+  button, [role="button"], a[class*="rounded-full"][class*="bg-primary"] {
+    transition: transform 150ms ease;
+  }
+  button:active:not(:disabled), [role="button"]:active:not(:disabled) {
+    transform: scale(0.97);
   }
 }
