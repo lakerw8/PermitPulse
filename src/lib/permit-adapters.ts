@@ -647,11 +647,15 @@ const sanDiegoCounty: CityAdapter = {
 
 function parseArcGISResponse(json: unknown): Record<string, string>[] {
   const data = json as { features?: { attributes?: Record<string, string>; geometry?: { x?: number; y?: number } }[] };
-  return (data?.features || []).map((f) => ({
-    ...f.attributes,
-    _geo_x: String(f.geometry?.x ?? ""),
-    _geo_y: String(f.geometry?.y ?? ""),
-  })) as Record<string, string>[];
+  return (data?.features || []).map((f) => {
+    const gx = f.geometry?.x;
+    const gy = f.geometry?.y;
+    return {
+      ...f.attributes,
+      _geo_x: (typeof gx === "number" && !isNaN(gx)) ? String(gx) : "",
+      _geo_y: (typeof gy === "number" && !isNaN(gy)) ? String(gy) : "",
+    };
+  }) as Record<string, string>[];
 }
 
 const denver: CityAdapter = {
@@ -2616,8 +2620,8 @@ const aurora: CityAdapter = {
     const desc = r.FolderDescription || r.SubDesc || "";
     if (!desc) return null;
     const value = parseFloat(r.valuation || "0");
-    const lat = parseFloat(r._geo_y || "39.7294");
-    const lng = parseFloat(r._geo_x || "-104.8319");
+    const lat = parseFloat(r._geo_y || "0") || 39.7294;
+    const lng = parseFloat(r._geo_x || "0") || -104.8319;
     const issued = r.IssueDate ? new Date(parseInt(r.IssueDate)).toISOString().split("T")[0] : dateNDaysAgo(0);
     const mapStatus = (s: string) => {
       if (s?.includes("Final") || s?.includes("Certificate") || s?.includes("Closed")) return "Completed" as const;
