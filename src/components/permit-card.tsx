@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import {
   MapPin,
@@ -43,13 +44,18 @@ interface PermitCardProps {
 }
 
 export function PermitCard({ permit, showLockedContact = true }: PermitCardProps) {
-  const { isPaid } = useAuth();
+  const { user, isPaid } = useAuth();
   const { isLeadSaved, saveLead, removeLead, canSaveMore } = useLeads();
+  const router = useRouter();
   const saved = isLeadSaved(permit.id);
 
   function handleSaveToggle(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+    if (!user) {
+      router.push("/login");
+      return;
+    }
     if (saved) {
       removeLead(permit.id);
     } else if (canSaveMore(isPaid)) {
