@@ -885,8 +885,8 @@ const orlando: CityAdapter = {
   state: "FL",
   buildQuery(dateStr) {
     return new URLSearchParams({
-      $where: `issue_permit_date >= '${dateStr}T00:00:00.000' AND plan_review_type = 'Commercial' AND estimated_cost > 50000`,
-      $order: "issue_permit_date DESC",
+      $where: `plan_review_type = 'Commercial' AND (issue_permit_date >= '${dateStr}T00:00:00.000' OR processed_date >= '${dateStr}T00:00:00.000')`,
+      $order: "processed_date DESC",
       $limit: "200",
     });
   },
@@ -4215,6 +4215,86 @@ const mckinneyTX: CityAdapter = {
   },
 };
 
+const cambridgeMA: CityAdapter = {
+  domain: "data.cambridgema.gov",
+  datasetId: "ex75-8iwq",
+  city: "Cambridge",
+  state: "MA",
+  buildQuery(dateStr) {
+    return new URLSearchParams({
+      $where: `issue_date >= '${dateStr}T00:00:00.000' AND existing_building_use like '%Commercial%'`,
+      $order: "issue_date DESC",
+      $limit: "200",
+    });
+  },
+  toPermit(r, idx) {
+    const desc = r.description_of_work || r.isd_approved_description || "";
+    if (!desc) return null;
+    const value = parseFloat(r.total_cost_of_construction || r.building_cost || "0");
+    const lat = parseFloat(r.latitude || "42.3736");
+    const lng = parseFloat(r.longitude || "-71.1097");
+    return {
+      id: `cmb-${r.viewpoint_id || idx}`,
+      permitNumber: r.viewpoint_id || `CMB-${idx}`,
+      address: r.full_address || "Cambridge, MA",
+      city: "Cambridge",
+      state: "MA",
+      zip: "02139",
+      latitude: lat,
+      longitude: lng,
+      filingDate: r.issue_date ? r.issue_date.split("T")[0] : dateNDaysAgo(0),
+      description: desc,
+      estimatedValue: value || 100000,
+      status: mapStatus(r.status),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: r.licensed_firm_name || "Unknown Contractor", contactName: r.licensed_name || r.applicant_name || null, phone: null, email: null, confidence: (r.licensed_firm_name ? "Medium" : "Low") as ContactConfidence },
+      source: "data.cambridgema.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const santaMonicaCA: CityAdapter = {
+  domain: "",
+  datasetId: "",
+  city: "Santa Monica",
+  state: "CA",
+  buildUrl(dateStr: string) {
+    const filters = encodeURIComponent(JSON.stringify({ permit_type: "Commercial" }));
+    return `https://data.santamonica.gov/api/3/action/datastore_search?resource_id=d6867c7d-89bc-4975-be35-4d2673a4764b&limit=200&filters=${filters}&sort=date_entered desc`;
+  },
+  buildQuery() { return new URLSearchParams(); },
+  parseResponse(json: unknown) {
+    const body = json as { result?: { records?: Record<string, string>[] } };
+    return body?.result?.records ?? [];
+  },
+  toPermit(r, idx) {
+    const desc = r.description || "";
+    if (!desc) return null;
+    const value = parseFloat(r.valuation || "0");
+    const lat = parseFloat(r.latitude || "34.0195");
+    const lng = parseFloat(r.longitude || "-118.4912");
+    return {
+      id: `smo-${r.permit_number || idx}`,
+      permitNumber: r.permit_number || `SMO-${idx}`,
+      address: r.address || "Santa Monica, CA",
+      city: "Santa Monica",
+      state: "CA",
+      zip: "90401",
+      latitude: lat,
+      longitude: lng,
+      filingDate: r.date_entered || r.date_issued || dateNDaysAgo(0),
+      description: desc,
+      estimatedValue: value || 100000,
+      status: mapStatus(r.status),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "data.santamonica.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
 const planoTX: CityAdapter = {
   domain: "data.texas.gov",
   datasetId: "82ee-gbj5",
@@ -4394,6 +4474,8 @@ export const METRO_ADAPTERS: Record<string, CityAdapter[]> = {
   mckinney: [mckinneyTX],
   plano: [planoTX],
   richardson: [richardsonTX],
+  "santa-monica": [santaMonicaCA],
+  cambridge: [cambridgeMA],
 };
 
 export async function fetchAdapter(adapter: CityAdapter, dateStr: string): Promise<Permit[]> {
