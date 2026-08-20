@@ -4668,6 +4668,592 @@ const richardsonTX: CityAdapter = {
   },
 };
 
+const boulderCO: CityAdapter = {
+  domain: "services.arcgis.com",
+  datasetId: "boulder-permits",
+  city: "Boulder",
+  state: "CO",
+  buildQuery() { return new URLSearchParams(); },
+  buildUrl(dateStr) {
+    const where = encodeURIComponent(`(PermitType='Building Permit - Non-Residential' OR PermitType='Building Permit - Mixed Use') AND AppliedDate >= '${dateStr}'`);
+    return `https://services.arcgis.com/ePKBjXrBZ2vEEgWd/arcgis/rest/services/Construction_Permits/FeatureServer/0/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=AppliedDate+DESC`;
+  },
+  parseResponse: parseArcGISResponse,
+  toPermit(r, idx) {
+    const desc = r.Description || r.PermitWorkType || "";
+    const value = parseFloat(r.EstProjectCost || "0");
+    const gcName = r.ContractorCompanyName || "Unknown Contractor";
+    const confidence: ContactConfidence = gcName === "Unknown Contractor" ? "Low" : "Medium";
+    const address = r.OriginalAddress || "Boulder, CO";
+    return {
+      id: `bou-${r.PermitNum || idx}`,
+      permitNumber: r.PermitNum || `BOU-${idx}`,
+      address,
+      city: "Boulder",
+      state: "CO",
+      zip: r.OriginalZip || "80302",
+      latitude: 40.015,
+      longitude: -105.2705,
+      filingDate: r.AppliedDate ? r.AppliedDate.split("T")[0] : dateNDaysAgo(0),
+      description: desc || "Commercial construction work",
+      estimatedValue: value || 100000,
+      status: mapStatus(r.StatusCurrent),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: gcName, contactName: null, phone: null, email: null, confidence },
+      source: "open-data.bouldercolorado.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const tulsaOK: CityAdapter = {
+  domain: "services3.arcgis.com",
+  datasetId: "tulsa-permits",
+  city: "Tulsa",
+  state: "OK",
+  buildQuery() { return new URLSearchParams(); },
+  buildUrl(dateStr) {
+    const where = encodeURIComponent(`AcctType IN ('Commercial','Comm Res','Exempt Com') AND PermitDate >= '${dateStr}'`);
+    return `https://services3.arcgis.com/JfsWgLAOPxX7NGuG/arcgis/rest/services/Building_Permit/FeatureServer/195/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=PermitDate+DESC`;
+  },
+  parseResponse: parseArcGISResponse,
+  toPermit(r, idx) {
+    const desc = r.Detail || r.PermitReason || "";
+    const gcName = "Unknown Contractor";
+    const filingDate = r.PermitDate ? r.PermitDate.trim().split(" ")[0] : dateNDaysAgo(0);
+    return {
+      id: `tul-${r.PermitNo || idx}`,
+      permitNumber: r.PermitNo || `TUL-${idx}`,
+      address: r.PermitUse || "Tulsa, OK",
+      city: "Tulsa",
+      state: "OK",
+      zip: "74103",
+      latitude: parseFloat(r._geo_y || "36.1540"),
+      longitude: parseFloat(r._geo_x || "-95.9928"),
+      filingDate,
+      description: desc || `${r.PermitReason || "Commercial"} permit - ${r.Source || ""}`.trim(),
+      estimatedValue: 100000,
+      status: mapStatus(r.Status),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: gcName, contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "services3.arcgis.com (Tulsa County)",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const richmondVA: CityAdapter = {
+  domain: "services1.arcgis.com",
+  datasetId: "richmond-dev-tracker",
+  city: "Richmond",
+  state: "VA",
+  buildQuery() { return new URLSearchParams(); },
+  buildUrl() {
+    const where = encodeURIComponent("LandUse_Type IN ('Commercial','Mixed Use','Mixed-Use','Office','Industrial','Office and Retail')");
+    return `https://services1.arcgis.com/k3vhq11XkBNeeOfM/ArcGIS/rest/services/Development_Tracker/FeatureServer/0/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=Approval_Date+DESC`;
+  },
+  parseResponse(json: unknown): Record<string, string>[] {
+    const data = json as { features?: { attributes?: Record<string, string>; geometry?: { rings?: number[][][] } }[] };
+    return (data?.features || []).map((f) => {
+      let cx = 0, cy = 0;
+      const rings = f.geometry?.rings;
+      if (rings && rings[0]) {
+        const pts = rings[0];
+        cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+        cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+      }
+      return { ...f.attributes, _geo_x: cx ? String(cx) : "", _geo_y: cy ? String(cy) : "" } as Record<string, string>;
+    });
+  },
+  toPermit(r, idx) {
+    const desc = r.Project_Name || r.LandUse_Type || "";
+    const sqft = parseFloat(r.Total_SqFt || "0");
+    const devName = r.Developer_Name || "Unknown Contractor";
+    const confidence: ContactConfidence = devName === "Unknown Contractor" ? "Low" : "Medium";
+    let filingDate = dateNDaysAgo(0);
+    if (r.Approval_Date) {
+      const d = new Date(Number(r.Approval_Date));
+      if (!isNaN(d.getTime())) filingDate = d.toISOString().split("T")[0];
+    }
+    return {
+      id: `rva-${r.OBJECTID || idx}`,
+      permitNumber: `RVA-${r.OBJECTID || idx}`,
+      address: r.Address || "Richmond, VA",
+      city: "Richmond",
+      state: "VA",
+      zip: "23219",
+      latitude: parseFloat(r._geo_y || "37.5407"),
+      longitude: parseFloat(r._geo_x || "-77.4360"),
+      filingDate,
+      description: `${desc} (${r.LandUse_Type || ""}, ${sqft ? sqft.toLocaleString() + " sqft" : ""})`.trim(),
+      estimatedValue: sqft > 0 ? sqft * 150 : 500000,
+      status: r.Status === "Completed" ? "Completed" as PermitStatus : r.Status === "Under Construction" ? "Issued" as PermitStatus : "Under Review" as PermitStatus,
+      trades: classifyTrades(desc),
+      gcContact: { companyName: devName, contactName: null, phone: null, email: null, confidence },
+      source: "services1.arcgis.com (Richmond VA)",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+function makeNJAdapter(muniName: string, cityDisplay: string, lat: number, lng: number, zip: string): CityAdapter {
+  const prefix = cityDisplay.toLowerCase().replace(/[^a-z]/g, "").slice(0, 3);
+  return {
+    domain: "data.nj.gov",
+    datasetId: "w9se-dmra",
+    city: cityDisplay,
+    state: "NJ",
+    buildUrl(dateStr) {
+      const params = new URLSearchParams({
+        "$where": `muniname='${muniName}' AND usegroup IN ('B','M','F1','F2','S1','S2','A1','A2','A3','A4','A5','E','I1','I2','H') AND permitdate >= '${dateStr}T00:00:00.000'`,
+        "$order": "permitdate DESC",
+        "$limit": "200",
+      });
+      return `https://data.nj.gov/resource/w9se-dmra.json?${params}`;
+    },
+    buildQuery() { return new URLSearchParams(); },
+    toPermit(r, idx) {
+      const desc = `${r.permittypedesc || ""} - ${r.usegroupdesc || ""}`.trim();
+      const value = parseFloat(r.constcost || "0");
+      if (value > 0 && value < 10000) return null;
+      return {
+        id: `nj${prefix}-${r.permitno || idx}`,
+        permitNumber: r.permitno || `NJ-${prefix.toUpperCase()}-${idx}`,
+        address: `Block ${r.block || "?"} Lot ${r.lot || "?"}, ${cityDisplay}, NJ`,
+        city: cityDisplay,
+        state: "NJ",
+        zip,
+        latitude: lat,
+        longitude: lng,
+        filingDate: r.permitdate ? r.permitdate.split("T")[0] : dateNDaysAgo(0),
+        description: desc || "Commercial construction",
+        estimatedValue: value || 100000,
+        status: r.permitstatusdesc === "Certificate" ? "Completed" as PermitStatus : "Issued" as PermitStatus,
+        trades: classifyTrades(desc),
+        gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+        source: "data.nj.gov",
+        sourceUpdatedAt: dateNDaysAgo(0),
+      };
+    },
+  };
+}
+
+const newarkNJ = makeNJAdapter("NEWARK", "Newark", 40.7357, -74.1724, "07102");
+const patersonNJ = makeNJAdapter("PATERSON", "Paterson", 40.9168, -74.1718, "07501");
+const edisonNJ = makeNJAdapter("EDISON", "Edison", 40.5187, -74.4121, "08817");
+const cliftonNJ = makeNJAdapter("CLIFTON", "Clifton", 40.8584, -74.1638, "07011");
+const lakewoodNJ = makeNJAdapter("LAKEWOOD", "Lakewood", 40.0979, -74.2177, "08701");
+const tomsRiverNJ = makeNJAdapter("TOMS RIVER", "Toms River", 39.9537, -74.1979, "08753");
+const woodbridgeNJ = makeNJAdapter("WOODBRIDGE", "Woodbridge", 40.5576, -74.2846, "07095");
+const cherryHillNJ = makeNJAdapter("CHERRY HILL", "Cherry Hill", 39.9348, -75.0308, "08002");
+const paramusNJ = makeNJAdapter("PARAMUS", "Paramus", 40.9445, -74.0754, "07652");
+const hamiltonNJ = makeNJAdapter("HAMILTON MERCER", "Hamilton", 40.2271, -74.6921, "08619");
+const parsippanyNJ = makeNJAdapter("PARSIPPANY-TROY HILLS", "Parsippany", 40.8578, -74.4260, "07054");
+const oldBridgeNJ = makeNJAdapter("OLD BRIDGE", "Old Bridge", 40.4151, -74.3654, "08857");
+const bridgewaterNJ = makeNJAdapter("BRIDGEWATER", "Bridgewater", 40.5934, -74.6076, "08807");
+const morristownNJ = makeNJAdapter("MORRISTOWN", "Morristown", 40.7968, -74.4815, "07960");
+const mountLaurelNJ = makeNJAdapter("MOUNT LAUREL", "Mount Laurel", 39.9340, -74.8910, "08054");
+const ewingNJ = makeNJAdapter("EWING", "Ewing", 40.2694, -74.7997, "08618");
+const princetonNJ = makeNJAdapter("PRINCETON (NEW)", "Princeton", 40.3573, -74.6672, "08540");
+const freeholdNJ = makeNJAdapter("FREEHOLD TWP", "Freehold", 40.2601, -74.2736, "07728");
+const fortLeeNJ = makeNJAdapter("FORT LEE", "Fort Lee", 40.8509, -73.9701, "07024");
+const lindenNJ = makeNJAdapter("LINDEN", "Linden", 40.6220, -74.2446, "07036");
+
+const bendOR: CityAdapter = {
+  domain: "services5.arcgis.com",
+  datasetId: "bend-permits",
+  city: "Bend",
+  state: "OR",
+  buildQuery() { return new URLSearchParams(); },
+  buildUrl(dateStr) {
+    const epoch = new Date(dateStr).getTime();
+    const where = encodeURIComponent(`BuildingCategory='Commercial/Industrial' AND IssueDate >= ${epoch}`);
+    return `https://services5.arcgis.com/JisFYcK2mIVg9ueP/arcgis/rest/services/Permit_Applications_Point/FeatureServer/0/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=IssueDate+DESC`;
+  },
+  parseResponse: parseArcGISResponse,
+  toPermit(r, idx) {
+    const desc = r.ApplicationDescription || r.TypeDesc || "";
+    const value = parseFloat(r.ProjectValuation || "0");
+    if (value > 0 && value < 25000) return null;
+    const gcName = r.Owner || "Unknown Contractor";
+    const confidence: ContactConfidence = gcName === "Unknown Contractor" ? "Low" : "Medium";
+    let filingDate = dateNDaysAgo(0);
+    if (r.IssueDate) {
+      const d = new Date(Number(r.IssueDate));
+      if (!isNaN(d.getTime())) filingDate = d.toISOString().split("T")[0];
+    }
+    return {
+      id: `bnd-${r.ApplicationNumber || idx}`,
+      permitNumber: r.ApplicationNumber || `BND-${idx}`,
+      address: r.Address || "Bend, OR",
+      city: "Bend",
+      state: "OR",
+      zip: "97701",
+      latitude: parseFloat(r._geo_y || "44.0582"),
+      longitude: parseFloat(r._geo_x || "-121.3153"),
+      filingDate,
+      description: desc || "Commercial construction work",
+      estimatedValue: value || 100000,
+      status: mapStatus(r.ApplicationStatus),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: gcName, contactName: null, phone: null, email: null, confidence },
+      source: "services5.arcgis.com (Bend OR)",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const fairfaxCountyVA: CityAdapter = {
+  domain: "services1.arcgis.com",
+  datasetId: "fairfax-permits",
+  city: "Fairfax County",
+  state: "VA",
+  buildQuery() { return new URLSearchParams(); },
+  buildUrl(dateStr) {
+    const epoch = new Date(dateStr).getTime();
+    const where = encodeURIComponent(`APPTYPEALIAS IN ('Commercial New','Commercial Addition/Alteration') AND ISSUED_DATE >= ${epoch}`);
+    return `https://services1.arcgis.com/ioennV6PpG5Xodq0/arcgis/rest/services/Building_Records_PLUS/FeatureServer/0/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=ISSUED_DATE+DESC`;
+  },
+  parseResponse(json: unknown): Record<string, string>[] {
+    const data = json as { features?: { attributes?: Record<string, string>; geometry?: { rings?: number[][][] } }[] };
+    return (data?.features || []).map((f) => {
+      let cx = 0, cy = 0;
+      const rings = f.geometry?.rings;
+      if (rings && rings[0]) {
+        const pts = rings[0];
+        cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+        cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+      }
+      return { ...f.attributes, _geo_x: cx ? String(cx) : "", _geo_y: cy ? String(cy) : "" } as Record<string, string>;
+    });
+  },
+  toPermit(r, idx) {
+    const desc = r.PROJECT_NAME || r.APPTYPEALIAS || "";
+    const gcName = "Unknown Contractor";
+    let filingDate = dateNDaysAgo(0);
+    if (r.ISSUED_DATE) {
+      const d = new Date(Number(r.ISSUED_DATE));
+      if (!isNaN(d.getTime())) filingDate = d.toISOString().split("T")[0];
+    }
+    return {
+      id: `ffx-${r.RECORDID || idx}`,
+      permitNumber: r.RECORDID || `FFX-${idx}`,
+      address: r.ADDRESS_1 || "Fairfax County, VA",
+      city: r.CITY || "Fairfax",
+      state: "VA",
+      zip: r.ZIP_CODE || "22030",
+      latitude: parseFloat(r._geo_y || "38.8462"),
+      longitude: parseFloat(r._geo_x || "-77.3064"),
+      filingDate,
+      description: desc || "Commercial construction",
+      estimatedValue: 500000,
+      status: mapStatus(r.RECORD_STATUS),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: gcName, contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "services1.arcgis.com (Fairfax County VA)",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+function makeMDBPDSAdapter(jurisdiction: string, cityDisplay: string, lat: number, lng: number, zip: string): CityAdapter {
+  const prefix = cityDisplay.toLowerCase().replace(/[^a-z]/g, "").slice(0, 3);
+  return {
+    domain: "services5.arcgis.com",
+    datasetId: "md-bpds",
+    city: cityDisplay,
+    state: "MD",
+    buildQuery() { return new URLSearchParams(); },
+    buildUrl(dateStr) {
+      const where = encodeURIComponent(`jurisdiction='${jurisdiction}' AND pmt_cat LIKE 'Non-Residential%' AND issue_dt >= '${dateStr}'`);
+      return `https://services5.arcgis.com/viVzbt0JWVlYD2i9/arcgis/rest/services/BPDS_2025/FeatureServer/0/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=issue_dt+DESC`;
+    },
+    parseResponse: parseArcGISResponse,
+    toPermit(r, idx) {
+      const desc = r.report_desc || r.development_name || "";
+      const value = parseFloat(r.amount || "0");
+      if (value > 0 && value < 25000) return null;
+      const gcName = r.cntr_name || "Unknown Contractor";
+      const confidence: ContactConfidence = gcName === "Unknown Contractor" ? "Low" : "Medium";
+      return {
+        id: `md${prefix}-${r.permit_no || idx}`,
+        permitNumber: r.permit_no || `MD-${prefix.toUpperCase()}-${idx}`,
+        address: r.site_addr || `${cityDisplay}, MD`,
+        city: cityDisplay,
+        state: "MD",
+        zip: r.site_addr_zip || zip,
+        latitude: parseFloat(r._geo_y || String(lat)),
+        longitude: parseFloat(r._geo_x || String(lng)),
+        filingDate: r.issue_dt || dateNDaysAgo(0),
+        description: desc || "Non-residential construction",
+        estimatedValue: value || 100000,
+        status: "Issued" as PermitStatus,
+        trades: classifyTrades(desc),
+        gcContact: { companyName: gcName, contactName: null, phone: null, email: null, confidence },
+        source: "services5.arcgis.com (MD BPDS)",
+        sourceUpdatedAt: dateNDaysAgo(0),
+      };
+    },
+  };
+}
+
+const annapolisMD = makeMDBPDSAdapter("Annapolis", "Annapolis", 38.9784, -76.4922, "21401");
+const anneArundelMD = makeMDBPDSAdapter("Anne Arundel County", "Anne Arundel County", 39.0458, -76.6413, "21401");
+const carrollCountyMD = makeMDBPDSAdapter("Carroll County", "Carroll County", 39.5639, -76.9942, "21157");
+const harfordCountyMD = makeMDBPDSAdapter("Harford County", "Harford County", 39.5361, -76.3008, "21014");
+
+const collegeStationTX: CityAdapter = {
+  domain: "data.cstx.gov",
+  datasetId: "hrbn-znt6",
+  city: "College Station",
+  state: "TX",
+  buildUrl(dateStr) {
+    const params = new URLSearchParams({
+      "$where": `(permit_type='Commercial New' OR permit_subtype='Commercial') AND issued_date >= '${dateStr}T00:00:00.000'`,
+      "$order": "issued_date DESC",
+      "$limit": "200",
+    });
+    return `https://data.cstx.gov/resource/hrbn-znt6.json?${params}`;
+  },
+  buildQuery() { return new URLSearchParams(); },
+  toPermit(r, idx) {
+    const desc = r.permit_description || r.permit_subtype || "";
+    if (isLikelyResidential(desc)) return null;
+    const value = parseFloat(r.valuation || "0");
+    if (value > 0 && value < 25000) return null;
+    let lat = 30.6280, lng = -96.3344;
+    if (r.location) {
+      const loc = typeof r.location === "string" ? JSON.parse(r.location) : r.location;
+      if (loc.latitude) lat = parseFloat(loc.latitude);
+      if (loc.longitude) lng = parseFloat(loc.longitude);
+    }
+    return {
+      id: `cst-${r.permit_number || idx}`,
+      permitNumber: r.permit_number || `CST-${idx}`,
+      address: r.address_1 || "College Station, TX",
+      city: r.city || "College Station",
+      state: "TX",
+      zip: r.zip || "77840",
+      latitude: lat,
+      longitude: lng,
+      filingDate: r.issued_date ? r.issued_date.split("T")[0] : dateNDaysAgo(0),
+      description: desc || "Commercial construction",
+      estimatedValue: value || 100000,
+      status: "Issued" as PermitStatus,
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "data.cstx.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const pierceCountyWA: CityAdapter = {
+  domain: "internal.open.piercecountywa.gov",
+  datasetId: "nhnt-v7ka",
+  city: "Pierce County",
+  state: "WA",
+  buildUrl(dateStr) {
+    const params = new URLSearchParams({
+      "$where": `applicationtype='Construction Commercial' AND issueddate >= '${dateStr}T00:00:00.000'`,
+      "$order": "issueddate DESC",
+      "$limit": "200",
+    });
+    return `https://internal.open.piercecountywa.gov/resource/nhnt-v7ka.json?${params}`;
+  },
+  buildQuery() { return new URLSearchParams(); },
+  toPermit(r, idx) {
+    const desc = r.workdescription || r.buildingtype || "";
+    const value = parseFloat(r.buildingvaluation || "0");
+    if (value > 0 && value < 25000) return null;
+    let lat = 47.0676, lng = -122.3714;
+    if (r.the_geom) {
+      const geo = typeof r.the_geom === "string" ? JSON.parse(r.the_geom) : r.the_geom;
+      if (geo.coordinates) { lng = geo.coordinates[0]; lat = geo.coordinates[1]; }
+    }
+    return {
+      id: `prc-${r.applicationnumber || idx}`,
+      permitNumber: r.applicationnumber || `PRC-${idx}`,
+      address: r.siteaddress || "Pierce County, WA",
+      city: "Pierce County",
+      state: "WA",
+      zip: "98402",
+      latitude: lat,
+      longitude: lng,
+      filingDate: r.issueddate ? r.issueddate.split("T")[0] : dateNDaysAgo(0),
+      description: desc || "Commercial construction",
+      estimatedValue: value || 100000,
+      status: mapStatus(r.applicationstatus),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "internal.open.piercecountywa.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const forsythCountyGA: CityAdapter = {
+  domain: "geo.forsythco.com",
+  datasetId: "forsyth-permits",
+  city: "Forsyth County",
+  state: "GA",
+  buildQuery() { return new URLSearchParams(); },
+  buildUrl(dateStr) {
+    const epoch = new Date(dateStr).getTime();
+    const where = encodeURIComponent(`PermitType='Building (Commercial)' AND IssueDate >= ${epoch}`);
+    return `https://geo.forsythco.com/gis3/rest/services/Public_EnerGovPlans/Building_Permits/FeatureServer/0/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=IssueDate+DESC`;
+  },
+  parseResponse: parseArcGISResponse,
+  toPermit(r, idx) {
+    const desc = r.PermitClassDescription || r.PermitClass || "";
+    const gcName = "Unknown Contractor";
+    let filingDate = dateNDaysAgo(0);
+    if (r.IssueDate) {
+      const d = new Date(Number(r.IssueDate));
+      if (!isNaN(d.getTime())) filingDate = d.toISOString().split("T")[0];
+    }
+    return {
+      id: `fsy-${r.PermitNumber || idx}`,
+      permitNumber: r.PermitNumber || `FSY-${idx}`,
+      address: `Parcel ${r.ParcelNumber || "?"}, Forsyth County, GA`,
+      city: "Forsyth County",
+      state: "GA",
+      zip: "30040",
+      latitude: parseFloat(r._geo_y || "34.2290"),
+      longitude: parseFloat(r._geo_x || "-84.1413"),
+      filingDate,
+      description: desc || "Commercial building permit",
+      estimatedValue: 200000,
+      status: mapStatus(r.PermitStatus),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: gcName, contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "geo.forsythco.com",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const charlottesvilleVA: CityAdapter = {
+  domain: "gisweb.charlottesville.org",
+  datasetId: "cville-permits",
+  city: "Charlottesville",
+  state: "VA",
+  buildQuery() { return new URLSearchParams(); },
+  buildUrl(dateStr) {
+    const epoch = new Date(dateStr).getTime();
+    const where = encodeURIComponent(`PermitType LIKE 'C-%' AND IssuedDate >= ${epoch}`);
+    return `https://gisweb.charlottesville.org/cvgisweb/rest/services/OpenData_2/MapServer/33/query?where=${where}&outFields=*&f=json&resultRecordCount=200&orderByFields=IssuedDate+DESC`;
+  },
+  parseResponse: parseArcGISResponse,
+  toPermit(r, idx) {
+    const desc = r.WorkDescription || r.PermitSubType || "";
+    const value = parseFloat(r.Valuation || "0");
+    if (value > 0 && value < 10000) return null;
+    let filingDate = dateNDaysAgo(0);
+    if (r.IssuedDate) {
+      const d = new Date(Number(r.IssuedDate));
+      if (!isNaN(d.getTime())) filingDate = d.toISOString().split("T")[0];
+    }
+    return {
+      id: `cvl-${r.PermitNumber || idx}`,
+      permitNumber: r.PermitNumber || `CVL-${idx}`,
+      address: r.PropertyAddress || "Charlottesville, VA",
+      city: "Charlottesville",
+      state: "VA",
+      zip: "22902",
+      latitude: 38.0293,
+      longitude: -78.4767,
+      filingDate,
+      description: desc || "Commercial permit",
+      estimatedValue: value || 100000,
+      status: "Issued" as PermitStatus,
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "gisweb.charlottesville.org",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const sonomaCountyCA: CityAdapter = {
+  domain: "data.sonomacounty.ca.gov",
+  datasetId: "88ms-k5e7",
+  city: "Sonoma County",
+  state: "CA",
+  buildUrl(dateStr) {
+    const params = new URLSearchParams({
+      "$where": `(description LIKE '%Commercial%' OR description LIKE '%commercial%') AND issued >= '${dateStr}T00:00:00.000'`,
+      "$order": "issued DESC",
+      "$limit": "200",
+    });
+    return `https://data.sonomacounty.ca.gov/resource/88ms-k5e7.json?${params}`;
+  },
+  buildQuery() { return new URLSearchParams(); },
+  toPermit(r, idx) {
+    const desc = r.description || r.application_type || "";
+    const value = parseFloat(r.value || "0");
+    return {
+      id: `snm-${r.file_number || idx}`,
+      permitNumber: r.file_number || `SNM-${idx}`,
+      address: r.address || "Sonoma County, CA",
+      city: "Sonoma County",
+      state: "CA",
+      zip: "95476",
+      latitude: 38.2919,
+      longitude: -122.4580,
+      filingDate: r.issued ? r.issued.split("T")[0] : dateNDaysAgo(0),
+      description: desc || "Commercial permit",
+      estimatedValue: value || 100000,
+      status: mapStatus(r.status),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "data.sonomacounty.ca.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const alpharettaGA: CityAdapter = {
+  domain: "alphagis.alpharetta.ga.us",
+  datasetId: "alpharetta-permits",
+  city: "Alpharetta",
+  state: "GA",
+  buildQuery() { return new URLSearchParams(); },
+  buildUrl(dateStr) {
+    const epoch = new Date(dateStr).getTime();
+    const where = encodeURIComponent(`DATE_ENTERED >= ${epoch}`);
+    return `https://alphagis.alpharetta.ga.us/arcgis/rest/services/OpenData/OpenData_PCE_Full/FeatureServer/1/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=DATE_ENTERED+DESC`;
+  },
+  parseResponse: parseArcGISResponse,
+  toPermit(r, idx) {
+    const desc = r.CASE_NAME || r.CASE_TYPE_DESC || "";
+    const gcName = "Unknown Contractor";
+    let filingDate = dateNDaysAgo(0);
+    if (r.DATE_ENTERED) {
+      const d = new Date(Number(r.DATE_ENTERED));
+      if (!isNaN(d.getTime())) filingDate = d.toISOString().split("T")[0];
+    }
+    return {
+      id: `alp-${r.CASE_NUMBER || idx}`,
+      permitNumber: r.CASE_NUMBER || `ALP-${idx}`,
+      address: r.Location || "Alpharetta, GA",
+      city: "Alpharetta",
+      state: "GA",
+      zip: "30009",
+      latitude: parseFloat(r._geo_y || "34.0754"),
+      longitude: parseFloat(r._geo_x || "-84.2941"),
+      filingDate,
+      description: desc || "Commercial construction",
+      estimatedValue: 200000,
+      status: mapStatus(r.STATUS_CODE),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: gcName, contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "alphagis.alpharetta.ga.us",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
 export const METRO_ADAPTERS: Record<string, CityAdapter[]> = {
   chicago: [chicago],
   austin: [austin],
@@ -4777,6 +5363,41 @@ export const METRO_ADAPTERS: Record<string, CityAdapter[]> = {
   "howard-county": [howardCountyMD],
   "long-beach": [longBeachCA],
   stockton: [stocktonCA],
+  boulder: [boulderCO],
+  tulsa: [tulsaOK],
+  "richmond-va": [richmondVA],
+  newark: [newarkNJ],
+  paterson: [patersonNJ],
+  edison: [edisonNJ],
+  clifton: [cliftonNJ],
+  "lakewood-nj": [lakewoodNJ],
+  "toms-river": [tomsRiverNJ],
+  woodbridge: [woodbridgeNJ],
+  "cherry-hill": [cherryHillNJ],
+  paramus: [paramusNJ],
+  "hamilton-nj": [hamiltonNJ],
+  parsippany: [parsippanyNJ],
+  "old-bridge": [oldBridgeNJ],
+  bridgewater: [bridgewaterNJ],
+  morristown: [morristownNJ],
+  "mount-laurel": [mountLaurelNJ],
+  ewing: [ewingNJ],
+  princeton: [princetonNJ],
+  freehold: [freeholdNJ],
+  "fort-lee": [fortLeeNJ],
+  linden: [lindenNJ],
+  bend: [bendOR],
+  "fairfax-county": [fairfaxCountyVA],
+  "md-annapolis": [annapolisMD],
+  "md-anne-arundel": [anneArundelMD],
+  "md-carroll": [carrollCountyMD],
+  "md-harford": [harfordCountyMD],
+  "college-station": [collegeStationTX],
+  "pierce-county": [pierceCountyWA],
+  "forsyth-county": [forsythCountyGA],
+  charlottesville: [charlottesvilleVA],
+  "sonoma-county": [sonomaCountyCA],
+  alpharetta: [alpharettaGA],
 };
 
 export async function fetchAdapter(adapter: CityAdapter, dateStr: string): Promise<Permit[]> {
