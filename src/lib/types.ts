@@ -201,6 +201,7 @@ export const METROS: Metro[] = [
   { id: "san-francisco", name: "San Francisco", state: "CA", label: "San Francisco, CA" },
   { id: "san-jose", name: "San Jose", state: "CA", label: "San Jose, CA" },
   { id: "san-marcos", name: "San Marcos", state: "CA", label: "San Marcos, CA" },
+  { id: "san-marcos-tx", name: "San Marcos", state: "TX", label: "San Marcos, TX" },
   { id: "san-mateo", name: "San Mateo", state: "CA", label: "San Mateo, CA" },
   { id: "san-ramon", name: "San Ramon", state: "CA", label: "San Ramon, CA" },
   { id: "sandy-springs", name: "Sandy Springs", state: "GA", label: "Sandy Springs, GA" },

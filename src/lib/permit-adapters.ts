@@ -423,7 +423,7 @@ const philadelphia: CityAdapter = {
     return new URLSearchParams();
   },
   buildUrl(dateStr) {
-    const q = `SELECT *, ST_Y(the_geom) AS lat, ST_X(the_geom) AS lng FROM permits WHERE permitissuedate >= '${dateStr}' AND commercialorresidential = 'COMMERCIAL' ORDER BY permitissuedate DESC LIMIT 200`;
+    const q = `SELECT *, ST_Y(the_geom) AS lat, ST_X(the_geom) AS lng FROM permits WHERE permitissuedate >= '${dateStr}' AND commercialorresidential = 'Commercial' ORDER BY permitissuedate DESC LIMIT 200`;
     return `https://phl.carto.com/api/v2/sql?q=${encodeURIComponent(q)}&format=json`;
   },
   parseResponse(json: unknown) {
@@ -1317,37 +1317,39 @@ const mesa: CityAdapter = {
 
 const newOrleans: CityAdapter = {
   domain: "data.nola.gov",
-  datasetId: "nbcf-m6c2",
+  datasetId: "rcm3-fn58",
   city: "New Orleans",
   state: "LA",
   buildQuery(dateStr) {
     return new URLSearchParams({
-      $where: `issuedate >= '${dateStr}T00:00:00.000' AND topcat = 'Business'`,
+      $where: `issuedate >= '${dateStr}T00:00:00.000' AND landuseshort = 'COMM'`,
       $order: "issuedate DESC",
       $limit: "200",
     });
   },
   toPermit(r, idx) {
-    const desc = r.descr || r.permittype || "";
+    const desc = r.description || r.type || "";
     if (isLikelyResidential(desc)) return null;
-    const value = parseFloat(r.constructionval || "0");
-    if (value > 0 && value < 50000) return null;
-    const geo = r.the_geom as unknown as { coordinates?: number[] } | undefined;
+    const value = parseFloat(r.constrval || "0");
+    const loc = r.location_1 as unknown as { latitude?: string; longitude?: string } | undefined;
+    const lat = parseFloat(loc?.latitude || "29.9511");
+    const lng = parseFloat(loc?.longitude || "-90.0715");
+    const gcName = (r.contractors || "").split(" dba ")[0] || "Unknown Contractor";
     return {
-      id: `nola-${r.prmtid || r.numstring || idx}`,
+      id: `nola-${r.numstring || idx}`,
       permitNumber: r.numstring || `NOLA-${idx}`,
       address: r.address || "New Orleans, LA",
       city: "New Orleans",
       state: "LA",
       zip: "70112",
-      latitude: geo?.coordinates?.[1] || 29.9511,
-      longitude: geo?.coordinates?.[0] || -90.0715,
+      latitude: lat,
+      longitude: lng,
       filingDate: r.issuedate?.split("T")[0] || dateNDaysAgo(0),
-      description: desc || "Commercial construction work",
-      estimatedValue: value,
-      status: mapStatus(undefined),
+      description: desc,
+      estimatedValue: value || 100000,
+      status: mapStatus(r.currentstatus),
       trades: classifyTrades(desc),
-      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" },
+      gcContact: { companyName: gcName, contactName: null, phone: null, email: null, confidence: (gcName === "Unknown Contractor" ? "Low" : "Medium") as ContactConfidence },
       source: "data.nola.gov",
       sourceUpdatedAt: dateNDaysAgo(0),
     };
@@ -2110,8 +2112,8 @@ const durham: CityAdapter = {
   city: "Durham",
   state: "NC",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://webgis.durhamnc.gov/server/rest/services/PublicServices/Inspections/MapServer/12/query?where=ISSUE_DATE>=${epoch}+AND+Occupancy+IN+('Business','Mercantile','Mixed+Use+Commercial','Factory+Industrial','Storage','Assembly')&outFields=PermitNum,ISSUE_DATE,DESCRIPTION,PROJECT_NAME,BLD_Cost,PmtStatus,Occupancy,BLDB_ACTIVITY&outSR=4326&f=json&resultRecordCount=200`;
+    const where = encodeURIComponent(`ISSUE_DATE > timestamp '${dateStr} 00:00:00' AND Occupancy IN ('Business','Mercantile','Mixed Use Commercial','Factory Industrial','Storage','Assembly')`);
+    return `https://webgis.durhamnc.gov/server/rest/services/PublicServices/Inspections/MapServer/12/query?where=${where}&outFields=PermitNum,ISSUE_DATE,DESCRIPTION,PROJECT_NAME,BLD_Cost,PmtStatus,Occupancy,BLDB_ACTIVITY&outSR=4326&f=json&resultRecordCount=200`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -2194,8 +2196,8 @@ const wichita: CityAdapter = {
   city: "Wichita",
   state: "KS",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://gismaps.wichita.gov/ageweb/rest/services/MISC/MABCD/FeatureServer/1/query?where=ApplicationDate>=${epoch}+AND+OccupancyType='BUSINESS'+AND+Jurisdiction='Wichita'&outFields=PermitNumber,InwardAddress,City,State,PostalCode,ApplicationDate,PermitDesc,DeclaredValuation,OccupancyType,PermitStatus,CustomName&outSR=4326&f=json&resultRecordCount=200&orderByFields=ApplicationDate+DESC`;
+    const where = encodeURIComponent(`ApplicationDate > timestamp '${dateStr} 00:00:00' AND OccupancyType='BUSINESS' AND Jurisdiction='Wichita'`);
+    return `https://gismaps.wichita.gov/ageweb/rest/services/MISC/MABCD/FeatureServer/1/query?where=${where}&outFields=PermitNumber,InwardAddress,City,State,PostalCode,ApplicationDate,PermitDesc,DeclaredValuation,OccupancyType,PermitStatus,CustomName&outSR=4326&f=json&resultRecordCount=200&orderByFields=ApplicationDate+DESC`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -2284,8 +2286,8 @@ const charleston: CityAdapter = {
   city: "Charleston",
   state: "SC",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://services2.arcgis.com/tQaXW7Zb1Vphzvgd/arcgis/rest/services/New_Construction_Permits/FeatureServer/0/query?where=ISSUE_DATE>=${epoch}+AND+PERMIT_TYPE='Building+Commercial'&outFields=PERMIT_NUMBER,PARCELADDR_LINE1,APPLICATION_DATE,ISSUE_DATE,DESCRIPTION,VALUATION,PERMIT_STATUS&outSR=4326&f=json&resultRecordCount=200&orderByFields=ISSUE_DATE+DESC`;
+    const where = encodeURIComponent(`ISSUE_DATE > timestamp '${dateStr} 00:00:00' AND PERMIT_TYPE='Building Commercial'`);
+    return `https://services2.arcgis.com/tQaXW7Zb1Vphzvgd/arcgis/rest/services/New_Construction_Permits/FeatureServer/0/query?where=${where}&outFields=PERMIT_NUMBER,PARCELADDR_LINE1,APPLICATION_DATE,ISSUE_DATE,DESCRIPTION,VALUATION,PERMIT_STATUS&outSR=4326&f=json&resultRecordCount=200&orderByFields=ISSUE_DATE+DESC`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -2329,8 +2331,8 @@ const hartford: CityAdapter = {
   city: "Hartford",
   state: "CT",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://utility.arcgis.com/usrsvcs/servers/d595ae995fb049d3ac54919ebf24b1ac/rest/services/HartfordOpenDataTables/FeatureServer/0/query?where=DateIssued>=${epoch}+AND+RECORD_TYPE_TYPE='Commercial'&outFields=RECORD_ID,PROPERTY_ADDRESS,DateIssued,DATE_OPENED,DESCRIPTION,Total_Construction_Cost,RECORD_STATUS&f=json&resultRecordCount=200&orderByFields=DateIssued+DESC`;
+    const where = encodeURIComponent(`DateIssued > timestamp '${dateStr} 00:00:00' AND RECORD_TYPE_TYPE='Commercial'`);
+    return `https://utility.arcgis.com/usrsvcs/servers/d595ae995fb049d3ac54919ebf24b1ac/rest/services/HartfordOpenDataTables/FeatureServer/0/query?where=${where}&outFields=RECORD_ID,PROPERTY_ADDRESS,DateIssued,DATE_OPENED,DESCRIPTION,Total_Construction_Cost,RECORD_STATUS&f=json&resultRecordCount=200&orderByFields=DateIssued+DESC`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -2464,8 +2466,8 @@ const boise: CityAdapter = {
   city: "Boise",
   state: "ID",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://services1.arcgis.com/WHM6qC35aMtyAAlN/arcgis/rest/services/PDS_BuildingPermits_HighImpact/FeatureServer/0/query?where=IssuedDate>=${epoch}+AND+TypeOfUse='Commercial'&outFields=RecordID,PropertyAddress,IssuedDate,RecordName,Description,JobValue,PermitStatus,TypeOfPermit,TypeOfWork&outSR=4326&f=json&resultRecordCount=200&orderByFields=IssuedDate+DESC`;
+    const where = encodeURIComponent(`IssuedDate > timestamp '${dateStr} 00:00:00' AND TypeOfUse='Commercial'`);
+    return `https://services1.arcgis.com/WHM6qC35aMtyAAlN/arcgis/rest/services/PDS_BuildingPermits_HighImpact/FeatureServer/0/query?where=${where}&outFields=RecordID,PropertyAddress,IssuedDate,RecordName,Description,JobValue,PermitStatus,TypeOfPermit,TypeOfWork&outSR=4326&f=json&resultRecordCount=200&orderByFields=IssuedDate+DESC`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -2509,8 +2511,8 @@ const greensboro: CityAdapter = {
   city: "Greensboro",
   state: "NC",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://gis.greensboro-nc.gov/arcgis/rest/services/EngineeringInspections/BuildingPermits_MS/MapServer/0/query?where=IssuedDate>=${epoch}+AND+BP_COMM_RESID_MULT='C'&outFields=PermitNum,FullAddress,Contractor,IssuedDate,Description,TotalCost,StatusCurrent,OccupancyDescCombo,ApplicationType&outSR=4326&f=json&resultRecordCount=200&orderByFields=IssuedDate+DESC`;
+    const where = encodeURIComponent(`IssuedDate > timestamp '${dateStr} 00:00:00' AND BP_COMM_RESID_MULT='C'`);
+    return `https://gis.greensboro-nc.gov/arcgis/rest/services/EngineeringInspections/BuildingPermits_MS/MapServer/0/query?where=${where}&outFields=PermitNum,FullAddress,Contractor,IssuedDate,Description,TotalCost,StatusCurrent,OccupancyDescCombo,ApplicationType&outSR=4326&f=json&resultRecordCount=200&orderByFields=IssuedDate+DESC`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -2693,8 +2695,8 @@ const chattanooga: CityAdapter = {
   city: "Chattanooga",
   state: "TN",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://services2.arcgis.com/cclAu9OKhOfjeUdr/arcgis/rest/services/Building_Permits_to_April_2021/FeatureServer/0/query?where=PERMIT_DAT>=${epoch}+AND+P_TYPE='Non-Residential'+AND+CITY='Chattanooga'&outFields=PERMIT_NUM,ADDRESS,PERMIT_DAT,VALUATION,P_DESC,DEV_TYPE_C,PERMIT_YEAR&outSR=4326&f=json&resultRecordCount=200&orderByFields=PERMIT_DAT+DESC`;
+    const where = encodeURIComponent(`PERMIT_DAT > timestamp '${dateStr} 00:00:00' AND P_TYPE='Non-Residential' AND CITY='Chattanooga'`);
+    return `https://services2.arcgis.com/cclAu9OKhOfjeUdr/arcgis/rest/services/Building_Permits_to_April_2021/FeatureServer/0/query?where=${where}&outFields=PERMIT_NUM,ADDRESS,PERMIT_DAT,VALUATION,P_DESC,DEV_TYPE_C,PERMIT_YEAR&outSR=4326&f=json&resultRecordCount=200&orderByFields=PERMIT_DAT+DESC`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -3025,8 +3027,8 @@ const tallahassee: CityAdapter = {
   city: "Tallahassee",
   state: "FL",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://intervector.leoncountyfl.gov/intervector/rest/services/MapServices/TLC_OverlayPermitsActive_D_WM/MapServer/0/query?where=IssuedDate>=${epoch}&outFields=PermitNum,Description,IssuedDate,EstProjectCost,StatusCurrent,OriginalAddress1,OriginalZip,PermitTypeDesc,PermitClassMapped,ContractorCompanyName,ContractorFullName,ContractorPhone,ContractorEmail,Latitude,Longitude,ProposedUse&outSR=4326&f=json&resultRecordCount=200&orderByFields=IssuedDate+DESC`;
+    const where = encodeURIComponent(`IssuedDate > timestamp '${dateStr} 00:00:00' AND PermitClassMapped IN ('Business','Office/Professional','Restaurant','Hotel/Motel','Industrial','Warehouse','Store Mercantile','Multi-Use','Parking Garage','Service Station/Repair Garage')`);
+    return `https://intervector.leoncountyfl.gov/intervector/rest/services/MapServices/TLC_OverlayPermitsActive_D_WM/MapServer/0/query?where=${where}&outFields=PermitNum,Description,IssuedDate,EstProjectCost,StatusCurrent,OriginalAddress1,OriginalZip,PermitTypeDesc,PermitClassMapped,ContractorCompanyName,ContractorFullName,ContractorPhone,ContractorEmail,Latitude,Longitude,ProposedUse&outSR=4326&f=json&resultRecordCount=200&orderByFields=IssuedDate+DESC`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -3105,8 +3107,8 @@ const fortLauderdale: CityAdapter = {
   city: "Fort Lauderdale",
   state: "FL",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://gis.fortlauderdale.gov/arcgis/rest/services/BuildingPermitTracker/BuildingPermitTracker/MapServer/0/query?where=SUBMITDT>=${epoch}&outFields=PERMITID,FULLADDR,PERMITDESC,ESTCOST,CONTRACTOR,CONTRACTPH,PERMITSTAT,PERMITTYPE,SUBMITDT,USECLASS&outSR=4326&f=json&resultRecordCount=200&orderByFields=SUBMITDT+DESC`;
+    const where = encodeURIComponent(`SUBMITDT > timestamp '${dateStr} 00:00:00'`);
+    return `https://gis.fortlauderdale.gov/arcgis/rest/services/BuildingPermitTracker/BuildingPermitTracker/MapServer/0/query?where=${where}&outFields=PERMITID,FULLADDR,PERMITDESC,ESTCOST,CONTRACTOR,CONTRACTPH,PERMITSTAT,PERMITTYPE,SUBMITDT,USECLASS&outSR=4326&f=json&resultRecordCount=200&orderByFields=SUBMITDT+DESC`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -3145,8 +3147,8 @@ const overlandPark: CityAdapter = {
   city: "Overland Park",
   state: "KS",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://maps.opkansas.org/mapping/rest/services/MixedInfo/Building_Permit_Report/MapServer/0/query?where=IssueDate>=${epoch}+AND+ReportPermitType+NOT+LIKE+'%25Residential%25'&outFields=CaseNumber,MainAddressLine1,Description,Valuation,PermitStatus,ReportPermitType,IssueDate,Latitude,Longitude&f=json&resultRecordCount=200&orderByFields=IssueDate+DESC`;
+    const where = encodeURIComponent(`IssueDate > timestamp '${dateStr} 00:00:00' AND ReportPermitType NOT LIKE '%Residential%'`);
+    return `https://maps.opkansas.org/mapping/rest/services/MixedInfo/Building_Permit_Report/MapServer/0/query?where=${where}&outFields=CaseNumber,MainAddressLine1,Description,Valuation,PermitStatus,ReportPermitType,IssueDate,Latitude,Longitude&f=json&resultRecordCount=200&orderByFields=IssueDate+DESC`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -3184,8 +3186,8 @@ const saltLakeCity: CityAdapter = {
   city: "Salt Lake City",
   state: "UT",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://maps.slc.gov/server/rest/services/Accela/Accela_Permits_v2/MapServer/1/query?where=OpenedDate>=${epoch}&outFields=PermitNumber,PermitType,ApplicationSubType,ApplicationStatus,OpenedDate,AppliedDate,PermitIssuance,FULL_ADDRESS,ProjectName,WorkDescription,JobValue,Applicant,ApplicantPhone,ApplicantEmail&outSR=4326&f=json&resultRecordCount=200&orderByFields=OpenedDate+DESC`;
+    const where = encodeURIComponent(`OpenedDate > timestamp '${dateStr} 00:00:00'`);
+    return `https://maps.slc.gov/server/rest/services/Accela/Accela_Permits_v2/MapServer/1/query?where=${where}&outFields=PermitNumber,PermitType,ApplicationSubType,ApplicationStatus,OpenedDate,AppliedDate,PermitIssuance,FULL_ADDRESS,ProjectName,WorkDescription,JobValue,Applicant,ApplicantPhone,ApplicantEmail&outSR=4326&f=json&resultRecordCount=200&orderByFields=OpenedDate+DESC`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -3224,8 +3226,8 @@ const peoria: CityAdapter = {
   city: "Peoria",
   state: "AZ",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://gis.peoriaaz.gov/arcgis/rest/services/Accela/Peoria_Building_Permit_All/MapServer/3/query?where=Permit_Type='Commercial'+AND+B1_FILE_DD>=${epoch}&outFields=Permit_Number,Permit_Type,B1_PER_SUB_TYPE,Project_Status,Project_Description,Project_Address,Applicant_Contact_Name,Applicant_Contact_Organization,ContactPH,IssDate,B1_FILE_DD&outSR=4326&f=json&resultRecordCount=200&orderByFields=B1_FILE_DD+DESC`;
+    const where = encodeURIComponent(`Permit_Type='Commercial' AND B1_FILE_DD > timestamp '${dateStr} 00:00:00'`);
+    return `https://gis.peoriaaz.gov/arcgis/rest/services/Accela/Peoria_Building_Permit_All/MapServer/3/query?where=${where}&outFields=Permit_Number,Permit_Type,B1_PER_SUB_TYPE,Project_Status,Project_Description,Project_Address,Applicant_Contact_Name,Applicant_Contact_Organization,ContactPH,IssDate,B1_FILE_DD&outSR=4326&f=json&resultRecordCount=200&orderByFields=B1_FILE_DD+DESC`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -3263,8 +3265,8 @@ const savannah: CityAdapter = {
   city: "Savannah",
   state: "GA",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://pub.sagis.org/arcgis/rest/services/Savannah/BuildingPermit_FC/FeatureServer/0/query?where=PermitType='Building+Commercial+Permit'+AND+IssuedDate_DATE>=${epoch}&outFields=PermitNumber,PermitType,WorkClass,PermitStatus,IssuedDate,Address,ApplicantName,Description,Permit_Value&outSR=4326&f=json&resultRecordCount=200&orderByFields=IssuedDate_DATE+DESC`;
+    const where = encodeURIComponent(`PermitType='Building Commercial Permit' AND IssuedDate_DATE > timestamp '${dateStr} 00:00:00'`);
+    return `https://pub.sagis.org/arcgis/rest/services/Savannah/BuildingPermit_FC/FeatureServer/0/query?where=${where}&outFields=PermitNumber,PermitType,WorkClass,PermitStatus,IssuedDate,Address,ApplicantName,Description,Permit_Value&outSR=4326&f=json&resultRecordCount=200&orderByFields=IssuedDate_DATE+DESC`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -3382,8 +3384,8 @@ const tacoma: CityAdapter = {
   city: "Tacoma",
   state: "WA",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://services3.arcgis.com/SCwJH1pD8WSn5T5y/arcgis/rest/services/accela_permit_data/FeatureServer/0/query?where=application_date>=${epoch}&outFields=permit_number,permit_type,permit_subtype,current_status,application_date,issued_date,applicant_name,address_line_1,description,valuation,latitude,longitude,zip&outSR=4326&f=json&resultRecordCount=200&orderByFields=application_date+DESC`;
+    const where = encodeURIComponent(`application_date > timestamp '${dateStr} 00:00:00'`);
+    return `https://services3.arcgis.com/SCwJH1pD8WSn5T5y/arcgis/rest/services/accela_permit_data/FeatureServer/0/query?where=${where}&outFields=permit_number,permit_type,permit_subtype,current_status,application_date,issued_date,applicant_name,address_line_1,description,valuation,latitude,longitude,zip&outSR=4326&f=json&resultRecordCount=200&orderByFields=application_date+DESC`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -3422,8 +3424,7 @@ const frisco: CityAdapter = {
   city: "Frisco",
   state: "TX",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://maps.friscotexas.gov/gis/rest/services/Public/External_Planning_and_Zoning/MapServer/1/query?where=Type='Commercial'+AND+Issued_Date>=${epoch}&outFields=Permit_No,Type,Address,Description,Status,Issued_Date,Project_Name&outSR=4326&f=json&resultRecordCount=200&orderByFields=Issued_Date+DESC`;
+    return `https://maps.friscotexas.gov/gis/rest/services/Public/External_Planning_and_Zoning/MapServer/1/query?where=${encodeURIComponent("Type='Commercial'")}&outFields=Permit_No,Type,Address,Description,Status,Issued_Date,Project_Name&outSR=4326&f=json&resultRecordCount=200&orderByFields=Issued_Date+DESC`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -3432,7 +3433,11 @@ const frisco: CityAdapter = {
     if (!desc) return null;
     const lat = parseFloat(r._geo_y || "33.1507");
     const lng = parseFloat(r._geo_x || "-96.8236");
-    const issued = r.Issued_Date ? new Date(parseInt(r.Issued_Date)).toISOString().split("T")[0] : dateNDaysAgo(0);
+    let issued = dateNDaysAgo(0);
+    if (r.Issued_Date) {
+      const parts = (r.Issued_Date as string).trim().split("/");
+      if (parts.length === 3) issued = `${parts[2]}-${parts[0].padStart(2, "0")}-${parts[1].padStart(2, "0")}`;
+    }
     return {
       id: `fri-${r.Permit_No || idx}`,
       permitNumber: r.Permit_No || `FRI-${idx}`,
@@ -3460,8 +3465,8 @@ const siouxFalls: CityAdapter = {
   city: "Sioux Falls",
   state: "SD",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://gis.siouxfalls.gov/arcgis/rest/services/Data/Community/MapServer/3/query?where=PERMITTYPE='Commercial+Building'+AND+ISSUEDATE>=${epoch}&outFields=MAINADDRESS,PERMITNUMBER,PERMITTYPE,PERMITSTATUS,WORKCLASS,APPLYDATE,ISSUEDATE,VALUATION,contractor_name&outSR=4326&f=json&resultRecordCount=200&orderByFields=ISSUEDATE+DESC`;
+    const where = encodeURIComponent(`PERMITTYPE='Commercial Building' AND ISSUEDATE > timestamp '${dateStr} 00:00:00'`);
+    return `https://gis.siouxfalls.gov/arcgis/rest/services/Data/Community/MapServer/3/query?where=${where}&outFields=MAINADDRESS,PERMITNUMBER,PERMITTYPE,PERMITSTATUS,WORKCLASS,APPLYDATE,ISSUEDATE,VALUATION,contractor_name&outSR=4326&f=json&resultRecordCount=200&orderByFields=ISSUEDATE+DESC`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -3499,8 +3504,8 @@ const wilmington: CityAdapter = {
   city: "Wilmington",
   state: "NC",
   buildUrl(dateStr: string) {
-    const epoch = new Date(dateStr).getTime();
-    return `https://gis.nhcgov.com/server/rest/services/Thematic/BuildingPermits/FeatureServer/0/query?where=PERMIT_TYPE%3D%27NHC+Commercial+Building%27+AND+ISSUE_DATE>=${epoch}&outFields=PERMIT_NUMBER,PERMIT_TYPE,WORK_CLASS,DESCRIPTION,VALUATION,GENERAL_CONTRACTOR,PROJECT_CONTACT,NUMBER,SUBNUM,STREET,TYPE,DIR,CITY,ZIPCODE,Lat,Lon,ISSUE_DATE,PERMIT_STATUS,SQUARE_FEET&outSR=4326&f=json&resultRecordCount=200&orderByFields=ISSUE_DATE+DESC`;
+    const where = encodeURIComponent(`PERMIT_TYPE='NHC Commercial Building' AND ISSUE_DATE > timestamp '${dateStr} 00:00:00'`);
+    return `https://gis.nhcgov.com/server/rest/services/Thematic/BuildingPermits/FeatureServer/0/query?where=${where}&outFields=PERMIT_NUMBER,PERMIT_TYPE,WORK_CLASS,DESCRIPTION,VALUATION,GENERAL_CONTRACTOR,PROJECT_CONTACT,NUMBER,SUBNUM,STREET,TYPE,DIR,CITY,ZIPCODE,Lat,Lon,ISSUE_DATE,PERMIT_STATUS,SQUARE_FEET&outSR=4326&f=json&resultRecordCount=200&orderByFields=ISSUE_DATE+DESC`;
   },
   buildQuery() { return new URLSearchParams(); },
   parseResponse: parseArcGISResponse,
@@ -4015,6 +4020,201 @@ const laredoTX: CityAdapter = {
   },
 };
 
+const dentonTX: CityAdapter = {
+  domain: "",
+  datasetId: "",
+  city: "Denton",
+  state: "TX",
+  buildUrl(dateStr: string) {
+    const filters = encodeURIComponent(JSON.stringify({ PERMIT_CATEGORY: "COMMERCIAL" }));
+    return `https://data.cityofdenton.com/api/3/action/datastore_search?resource_id=71a5f6cc-7cb9-4ecb-9482-70b2c1f3ab48&limit=200&filters=${filters}&sort=ISSUED_DATE desc`;
+  },
+  buildQuery() { return new URLSearchParams(); },
+  parseResponse(json: unknown) {
+    const body = json as { result?: { records?: Record<string, string>[] } };
+    return body?.result?.records ?? [];
+  },
+  toPermit(r, idx) {
+    const desc = r.PERMIT_NAME || "";
+    if (!desc) return null;
+    const raw = (r.JOB_VALUE || "0").replace(/[$,]/g, "");
+    const value = parseFloat(raw) || 0;
+    return {
+      id: `den-${r.PERMIT_NO || idx}`,
+      permitNumber: r.PERMIT_NO || `DEN-${idx}`,
+      address: r.SITE_ADDR || "Denton, TX",
+      city: "Denton",
+      state: "TX",
+      zip: "76201",
+      latitude: 33.2148,
+      longitude: -97.1331,
+      filingDate: r.ISSUED_DATE ? r.ISSUED_DATE.split("T")[0] : dateNDaysAgo(0),
+      description: desc,
+      estimatedValue: value || 100000,
+      status: mapStatus(r.STATUS),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: r.CONTRACTOR_NAME || "Unknown Contractor", contactName: null, phone: null, email: null, confidence: (r.CONTRACTOR_NAME ? "Medium" : "Low") as ContactConfidence },
+      source: "data.cityofdenton.com",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const pearlandTX: CityAdapter = {
+  domain: "",
+  datasetId: "",
+  city: "Pearland",
+  state: "TX",
+  buildUrl() {
+    return `https://gis.pearlandtx.gov/hosting/rest/services/Commercial_Permits/FeatureServer/0/query?where=1=1&outFields=CASE_NUMBER,LOCATION,DATE_ISSUED,CASE_NAME,BUS_CASE_DESC,CASE_STATUS,Applicant,PropertyOwner&outSR=4326&f=json&resultRecordCount=200&orderByFields=DATE_ISSUED+DESC`;
+  },
+  buildQuery() { return new URLSearchParams(); },
+  parseResponse: parseArcGISResponse,
+  toPermit(r, idx) {
+    const desc = r.CASE_NAME || r.BUS_CASE_DESC || "";
+    if (!desc) return null;
+    const lat = parseFloat(r._geo_y || "29.5635");
+    const lng = parseFloat(r._geo_x || "-95.2860");
+    const issued = r.DATE_ISSUED ? new Date(parseInt(r.DATE_ISSUED)).toISOString().split("T")[0] : dateNDaysAgo(0);
+    return {
+      id: `prl-${r.CASE_NUMBER || idx}`,
+      permitNumber: r.CASE_NUMBER || `PRL-${idx}`,
+      address: r.LOCATION || "Pearland, TX",
+      city: "Pearland",
+      state: "TX",
+      zip: "77581",
+      latitude: lat,
+      longitude: lng,
+      filingDate: issued,
+      description: desc,
+      estimatedValue: 100000,
+      status: mapStatus(r.CASE_STATUS),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: r.Applicant || "Unknown Contractor", contactName: null, phone: null, email: null, confidence: (r.Applicant ? "Medium" : "Low") as ContactConfidence },
+      source: "gis.pearlandtx.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const sugarLandTX: CityAdapter = {
+  domain: "",
+  datasetId: "",
+  city: "Sugar Land",
+  state: "TX",
+  buildUrl(dateStr: string) {
+    const filters = encodeURIComponent(JSON.stringify({ Type: "BUILDING - BUILDING COMMERCIAL" }));
+    return `https://data.sugarlandtx.gov/api/3/action/datastore_search?resource_id=6165c955-43bb-401e-96f7-ca3f5954387c&limit=200&filters=${filters}&sort=Issued Date desc`;
+  },
+  buildQuery() { return new URLSearchParams(); },
+  parseResponse(json: unknown) {
+    const body = json as { result?: { records?: Record<string, string>[] } };
+    return body?.result?.records ?? [];
+  },
+  toPermit(r, idx) {
+    const desc = r["Permit Description"] || "";
+    if (!desc) return null;
+    const raw = (r["Permit Valuation"] || "0").replace(/[$,]/g, "");
+    const value = parseFloat(raw) || 0;
+    return {
+      id: `sgl-${r["Permit Number"] || idx}`,
+      permitNumber: r["Permit Number"] || `SGL-${idx}`,
+      address: r.Address || "Sugar Land, TX",
+      city: "Sugar Land",
+      state: "TX",
+      zip: r["Zip Code"] || "77478",
+      latitude: 29.6197,
+      longitude: -95.6349,
+      filingDate: r["Issued Date"] ? r["Issued Date"].split("T")[0] : dateNDaysAgo(0),
+      description: desc,
+      estimatedValue: value || 100000,
+      status: mapStatus(r["Permit Status"]),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: r["Contact Company Name"] || "Unknown Contractor", contactName: null, phone: null, email: null, confidence: (r["Contact Company Name"] ? "Medium" : "Low") as ContactConfidence },
+      source: "data.sugarlandtx.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const sanMarcosTX: CityAdapter = {
+  domain: "",
+  datasetId: "",
+  city: "San Marcos",
+  state: "TX",
+  buildUrl(dateStr: string) {
+    const where = encodeURIComponent(`LANDUSE='Commercial' AND ISSUED > timestamp '${dateStr} 00:00:00'`);
+    return `https://services1.arcgis.com/Hug9pbs2TYetbCha/arcgis/rest/services/Permit/FeatureServer/2/query?where=${where}&outFields=PERMITID,ADDRESS,ISSUED,DESCRIPTION,LANDUSE,TYPE,STATUS,SQUAREFEET,ProjectName&outSR=4326&f=json&resultRecordCount=200&orderByFields=ISSUED+DESC`;
+  },
+  buildQuery() { return new URLSearchParams(); },
+  parseResponse: parseArcGISResponse,
+  toPermit(r, idx) {
+    const desc = r.DESCRIPTION || r.ProjectName || r.TYPE || "";
+    if (!desc) return null;
+    const lat = parseFloat(r._geo_y || "29.8833");
+    const lng = parseFloat(r._geo_x || "-97.9414");
+    const issued = r.ISSUED ? new Date(parseInt(r.ISSUED)).toISOString().split("T")[0] : dateNDaysAgo(0);
+    return {
+      id: `smtx-${r.PERMITID || idx}`,
+      permitNumber: r.PERMITID || `SMTX-${idx}`,
+      address: r.ADDRESS || "San Marcos, TX",
+      city: "San Marcos",
+      state: "TX",
+      zip: "78666",
+      latitude: lat,
+      longitude: lng,
+      filingDate: issued,
+      description: desc,
+      estimatedValue: 100000,
+      status: mapStatus(r.STATUS),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "arcgis.com/Hug9pbs2TYetbCha",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const mckinneyTX: CityAdapter = {
+  domain: "data.texas.gov",
+  datasetId: "82ee-gbj5",
+  city: "McKinney",
+  state: "TX",
+  buildUrl(dateStr: string) {
+    const params = new URLSearchParams({
+      "$where": `situscity='MCKINNEY' AND proprescom='Commercial' AND permitissueddate>'${dateStr}T00:00:00.000'`,
+      "$order": "permitissueddate DESC",
+      "$limit": "200",
+    });
+    return `https://data.texas.gov/resource/82ee-gbj5.json?${params}`;
+  },
+  buildQuery() { return new URLSearchParams(); },
+  toPermit(r, idx) {
+    const desc = r.permitcomments || r.permittypedescr || "";
+    if (!desc) return null;
+    const value = parseFloat(r.permitvalue || "0");
+    const addr = r.situsconcat || r.situsconcatshort || "McKinney, TX";
+    return {
+      id: `mck-${r.permitnum || idx}`,
+      permitNumber: r.permitnum || `MCK-${idx}`,
+      address: addr,
+      city: "McKinney",
+      state: "TX",
+      zip: r.situszip || "75069",
+      latitude: 33.1972,
+      longitude: -96.6397,
+      filingDate: r.permitissueddate ? r.permitissueddate.split("T")[0] : dateNDaysAgo(0),
+      description: desc,
+      estimatedValue: value || 100000,
+      status: "Issued" as PermitStatus,
+      trades: classifyTrades(desc),
+      gcContact: { companyName: r.permitbuildername || "Unknown Contractor", contactName: null, phone: null, email: null, confidence: (r.permitbuildername ? "Medium" : "Low") as ContactConfidence },
+      source: "data.texas.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
 export const METRO_ADAPTERS: Record<string, CityAdapter[]> = {
   chicago: [chicago],
   austin: [austin],
@@ -4107,6 +4307,11 @@ export const METRO_ADAPTERS: Record<string, CityAdapter[]> = {
   irving: [irvingTX],
   "arlington-tx": [arlingtonTX],
   laredo: [laredoTX],
+  denton: [dentonTX],
+  pearland: [pearlandTX],
+  "sugar-land": [sugarLandTX],
+  "san-marcos-tx": [sanMarcosTX],
+  mckinney: [mckinneyTX],
 };
 
 export async function fetchAdapter(adapter: CityAdapter, dateStr: string): Promise<Permit[]> {
