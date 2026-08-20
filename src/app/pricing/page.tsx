@@ -1,52 +1,72 @@
-/* Hallmark · genre: modern-minimal · macrostructure: Stat-Led · design-system: design.md · designed-as-app */
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Loader2 } from "lucide-react";
-import { PRICING_PLANS } from "@/lib/types";
+import { ArrowRight, Check, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
-const PLAN_DIFFERENCES: { label: string; values: (string | boolean)[] }[] = [
-  { label: "Metro areas", values: ["1", "1", "2"] },
-  { label: "Trade filters", values: ["1", "3", "4"] },
-  { label: "Contact enrichment", values: [false, true, true] },
-  { label: "Priority support", values: [false, false, true] },
+const FREE_FEATURES = [
+  "Browse all permits across 50+ metros",
+  "Filter by trade, value & status",
+  "Save up to 5 leads",
 ];
 
-const SHARED_FEATURES = [
+const PAID_FEATURES = [
   "Full GC name, phone & email",
-  "Full permit history",
-  "Weekly email digest",
-  "CSV export",
   "Unlimited saved leads",
+  "All metros & trade filters",
+  "Weekly email digest with GC details",
+  "CSV export",
+];
+
+const FAQS = [
+  {
+    q: "What data sources do you use?",
+    a: "Official municipal open data portals that publish building permits daily in machine-readable formats.",
+  },
+  {
+    q: "How accurate is the GC contact info?",
+    a: "Each contact includes a confidence score (High, Medium, or Low). We extract names from permit records and enrich with public business data.",
+  },
+  {
+    q: "Can I cancel anytime?",
+    a: "Yes. No contracts. Cancel from your dashboard and keep access through the end of your billing period.",
+  },
+  {
+    q: "How fresh is the data?",
+    a: "New permits appear within 24–48 hours of being published on the city portal.",
+  },
+  {
+    q: "What cities do you cover?",
+    a: "50+ metros across the US including Chicago, Austin, San Francisco, Seattle, New York, and many more.",
+  },
 ];
 
 export default function PricingPage() {
-  const { user } = useAuth();
+  const { user, isPaid } = useAuth();
   const router = useRouter();
-  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  async function handleCheckout(planId: string) {
+  async function handleCheckout() {
     if (!user) {
-      router.push(`/login?redirect=/pricing&plan=${planId}`);
+      router.push("/login?redirect=/pricing");
       return;
     }
-    setLoadingPlan(planId);
+    setLoading(true);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({}),
       });
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
       }
     } finally {
-      setLoadingPlan(null);
+      setLoading(false);
     }
   }
 
@@ -57,109 +77,153 @@ export default function PricingPage() {
           Pricing
         </h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          7-day free trial on all plans. No credit card required.
+          Find the lead for free. Pay to reach them.
         </p>
       </div>
 
-      <div className="mx-auto mt-10 grid max-w-4xl gap-4 lg:grid-cols-3">
-        {PRICING_PLANS.map((plan) => {
-          const isCurrentPlan = user?.plan === plan.id;
-          const isLoading = loadingPlan === plan.id;
+      <div className="mx-auto mt-10 grid max-w-3xl gap-4 sm:grid-cols-2">
+        {/* Free tier */}
+        <div className="rounded-lg border border-border p-6">
+          <h3 className="font-heading text-base font-semibold tracking-tight">
+            Free
+          </h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Browse permits, find opportunities
+          </p>
 
-          return (
-            <div
-              key={plan.id}
-              className={`relative overflow-visible rounded-lg border p-6 ${
-                plan.highlighted
-                  ? "border-primary ring-1 ring-primary/20"
-                  : "border-border"
-              }`}
-            >
-              {plan.highlighted && (
-                <span className="absolute -top-2.5 left-4 rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-medium text-primary-foreground">
-                  Popular
-                </span>
-              )}
+          <div className="mt-4 flex items-baseline gap-1">
+            <span className="font-heading text-3xl font-bold tracking-tight">
+              $0
+            </span>
+            <span className="text-sm text-muted-foreground">/forever</span>
+          </div>
 
-              <h3 className="font-heading text-base font-semibold tracking-tight">
-                {plan.name}
-              </h3>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {plan.description}
-              </p>
+          <ul className="mt-5 space-y-2.5">
+            {FREE_FEATURES.map((feature) => (
+              <li key={feature} className="flex items-start gap-2 text-sm">
+                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
 
-              <div className="mt-4 flex items-baseline gap-1">
-                <span className="font-heading text-3xl font-bold tracking-tight tabular-nums">
-                  ${plan.price}
-                </span>
-                <span className="text-sm text-muted-foreground">/mo</span>
-              </div>
+          <Button
+            className="mt-6 w-full rounded-full"
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/login" />}
+          >
+            Get Started
+          </Button>
+        </div>
 
-              <p className="mt-1.5 text-xs text-muted-foreground tabular-nums">
-                {plan.metros} metro{plan.metros > 1 ? "s" : ""} &middot;{" "}
-                {plan.trades} trade{plan.trades > 1 ? "s" : ""}
-              </p>
+        {/* Paid tier */}
+        <div className="relative overflow-visible rounded-lg border border-primary p-6 ring-1 ring-primary/20">
+          <span className="absolute -top-2.5 left-4 rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-medium text-primary-foreground">
+            Full Access
+          </span>
 
-              <Button
-                className="mt-5 w-full rounded-full"
-                variant={plan.highlighted ? "default" : "outline"}
-                size="sm"
-                disabled={isCurrentPlan || isLoading}
-                onClick={() => handleCheckout(plan.id)}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                    Redirecting&hellip;
-                  </>
-                ) : isCurrentPlan ? (
-                  "Current Plan"
-                ) : (
-                  <>
-                    Start Free Trial
-                    <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                  </>
-                )}
-              </Button>
-            </div>
-          );
-        })}
+          <h3 className="font-heading text-base font-semibold tracking-tight">
+            Pro
+          </h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Unlock GC contacts and win more work
+          </p>
+
+          <div className="mt-4 flex items-baseline gap-1">
+            <span className="font-heading text-3xl font-bold tracking-tight tabular-nums">
+              $79
+            </span>
+            <span className="text-sm text-muted-foreground">/mo</span>
+          </div>
+
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            7-day free trial &middot; cancel anytime
+          </p>
+
+          <ul className="mt-5 space-y-2.5">
+            {PAID_FEATURES.map((feature) => (
+              <li key={feature} className="flex items-start gap-2 text-sm">
+                <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                <span>{feature}</span>
+              </li>
+            ))}
+          </ul>
+
+          <Button
+            className="mt-6 w-full rounded-full"
+            variant="default"
+            size="sm"
+            disabled={isPaid || loading}
+            onClick={handleCheckout}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                Redirecting&hellip;
+              </>
+            ) : isPaid ? (
+              "Current Plan"
+            ) : (
+              <>
+                Start Free Trial
+                <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
-      <div className="mx-auto mt-14 max-w-4xl">
+      {/* Comparison */}
+      <div className="mx-auto mt-14 max-w-3xl">
         <h2 className="font-heading text-base font-semibold tracking-tight">
-          What&rsquo;s different
+          What&rsquo;s included
         </h2>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
                 <th className="pb-2.5 pr-6 text-left text-xs font-normal text-muted-foreground" />
-                {PRICING_PLANS.map((plan) => (
-                  <th
-                    key={plan.id}
-                    className="w-[100px] pb-2.5 text-center text-xs font-medium"
-                  >
-                    {plan.name}
-                  </th>
-                ))}
+                <th className="w-[100px] pb-2.5 text-center text-xs font-medium">
+                  Free
+                </th>
+                <th className="w-[100px] pb-2.5 text-center text-xs font-medium">
+                  Pro
+                </th>
               </tr>
             </thead>
             <tbody>
-              {PLAN_DIFFERENCES.map((row) => (
+              {[
+                { label: "Browse all permits", free: true, paid: true },
+                { label: "Search & filter", free: true, paid: true },
+                { label: "Saved leads", free: "5", paid: "Unlimited" },
+                { label: "GC contact info", free: false, paid: true },
+                { label: "CSV export", free: false, paid: true },
+                { label: "Weekly email digest", free: false, paid: true },
+              ].map((row) => (
                 <tr key={row.label} className="border-b border-border/50">
                   <td className="py-2.5 pr-6">{row.label}</td>
-                  {row.values.map((val, i) => (
-                    <td key={i} className="py-2.5 text-center">
-                      {val === true ? (
-                        <span className="text-foreground">{"✓"}</span>
-                      ) : val === false ? (
-                        <span className="text-muted-foreground/40">{"—"}</span>
-                      ) : (
-                        <span className="font-medium tabular-nums">{val}</span>
-                      )}
-                    </td>
-                  ))}
+                  <td className="py-2.5 text-center">
+                    {row.free === true ? (
+                      <span className="text-foreground">{"✓"}</span>
+                    ) : row.free === false ? (
+                      <span className="text-muted-foreground/40">{"—"}</span>
+                    ) : (
+                      <span className="font-medium tabular-nums">
+                        {row.free}
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-2.5 text-center">
+                    {row.paid === true ? (
+                      <span className="text-foreground">{"✓"}</span>
+                    ) : (
+                      <span className="font-medium tabular-nums">
+                        {row.paid}
+                      </span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -168,62 +232,20 @@ export default function PricingPage() {
 
         <p className="mt-6 text-xs text-muted-foreground">
           <span className="font-medium text-foreground">
-            Every plan includes
+            Every account includes
           </span>{" "}
-          {SHARED_FEATURES.join(" · ")}
+          Full permit history &middot; 50+ metros &middot; 10 trade categories
+          &middot; Daily data refresh
         </p>
       </div>
 
-      <div className="mx-auto mt-12 max-w-4xl border-t border-border pt-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="font-heading text-base font-semibold tracking-tight">
-              Free Account
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Browse 30 days of permits, save up to 15 leads. GC contacts
-              locked.
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0 rounded-full"
-            nativeButton={false}
-            render={<Link href="/login" />}
-          >
-            Sign Up Free
-          </Button>
-        </div>
-      </div>
-
-      <div className="mx-auto mt-14 max-w-4xl">
+      {/* FAQ */}
+      <div className="mx-auto mt-14 max-w-3xl">
         <h2 className="font-heading text-base font-semibold tracking-tight">
           FAQ
         </h2>
         <div className="mt-5 divide-y divide-border">
-          {[
-            {
-              q: "What data sources do you use?",
-              a: "Official municipal open data portals that publish building permits daily in machine-readable formats.",
-            },
-            {
-              q: "How accurate is the GC contact info?",
-              a: "Each contact includes a confidence score (High, Medium, or Low). We extract names from permit records and enrich with public business data.",
-            },
-            {
-              q: "Can I cancel anytime?",
-              a: "Yes. No contracts. Cancel from your dashboard and keep access through the end of your billing period.",
-            },
-            {
-              q: "How fresh is the data?",
-              a: "New permits appear within 24–48 hours of being published on the city portal.",
-            },
-            {
-              q: "What cities do you cover?",
-              a: "Chicago, Austin, San Francisco, Seattle, and New York City. More coming soon.",
-            },
-          ].map((item) => (
+          {FAQS.map((item) => (
             <div key={item.q} className="py-4">
               <h3 className="font-heading text-sm font-semibold tracking-tight">
                 {item.q}

@@ -13,7 +13,7 @@ import type { User as SupabaseUser, SupabaseClient } from "@supabase/supabase-js
 import { createClient } from "./supabase-browser";
 import type { Trade } from "./types";
 
-export type Plan = "free" | "starter" | "pro" | "growth";
+export type Plan = "free" | "paid";
 
 export interface User {
   id: string;
@@ -54,11 +54,16 @@ async function fetchProfile(supabase: SupabaseClient, userId: string): Promise<P
   return data;
 }
 
+function normalizePlan(raw: string | undefined | null): Plan {
+  if (!raw || raw === "free") return "free";
+  return "paid";
+}
+
 function mapToUser(su: SupabaseUser, profile: ProfileRow | null): User {
   return {
     id: su.id,
     email: su.email || "",
-    plan: (profile?.plan as Plan) ?? "free",
+    plan: normalizePlan(profile?.plan),
     metro: profile?.metro ?? "chicago",
     primaryTrade: (profile?.primary_trade as Trade) ?? null,
     trialEndsAt: profile?.trial_ends_at ?? null,

@@ -90,10 +90,8 @@ const TRADE_COLORS: Record<string, string> = {
 };
 
 const PLAN_LABELS: Record<Plan, string> = {
-  free: "Free Account",
-  starter: "Starter ($199/mo)",
-  pro: "Pro ($349/mo)",
-  growth: "Growth ($499/mo)",
+  free: "Free",
+  paid: "Pro ($79/mo)",
 };
 
 export default function DashboardPage() {
@@ -187,7 +185,7 @@ export default function DashboardPage() {
   function handleStartTrial() {
     const trialEnd = new Date();
     trialEnd.setDate(trialEnd.getDate() + 7);
-    updateUser({ plan: "starter", trialEndsAt: trialEnd.toISOString() });
+    updateUser({ plan: "paid", trialEndsAt: trialEnd.toISOString() });
   }
 
   return (
@@ -261,7 +259,7 @@ export default function DashboardPage() {
           {!isPaid && (
             <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-muted/50 px-4 py-2.5 dark:border-border">
               <span className="text-sm text-foreground">
-                {leads.length}/15 leads saved (free account limit)
+                {leads.length}/5 leads saved (free account limit)
               </span>
               <Button
                 size="sm"
@@ -528,7 +526,7 @@ export default function DashboardPage() {
                   Switch plans to test the paywall experience
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {(["free", "starter", "pro", "growth"] as Plan[]).map(
+                  {(["free", "paid"] as Plan[]).map(
                     (plan) => (
                       <Button
                         key={plan}

@@ -158,7 +158,7 @@ export default function LoginPage() {
           <ul className="mt-2 space-y-1.5">
             {[
               "Browse 30 days of permits",
-              "Save up to 15 leads",
+              "Save up to 5 leads",
               "Add notes to saved leads",
             ].map((f) => (
               <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">

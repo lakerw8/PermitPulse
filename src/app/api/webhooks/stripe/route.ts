@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { stripe, PRICE_PLAN_MAP } from "@/lib/stripe";
+import { stripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import type Stripe from "stripe";
 
@@ -44,14 +44,12 @@ export async function POST(req: Request) {
     case "customer.subscription.updated": {
       const subscription = event.data.object as Stripe.Subscription;
       const userId = subscription.metadata?.supabase_user_id;
-      const priceId = subscription.items.data[0]?.price.id;
-      const planId = priceId ? PRICE_PLAN_MAP[priceId] : null;
 
-      if (userId && planId) {
+      if (userId) {
         await supabaseAdmin
           .from("profiles")
           .update({
-            plan: planId,
+            plan: "paid",
             updated_at: new Date().toISOString(),
           })
           .eq("id", userId);

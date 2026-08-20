@@ -51,6 +51,39 @@ export const METROS: Metro[] = [
   { id: "memphis", name: "Memphis", state: "TN", label: "Memphis, TN" },
   { id: "pittsburgh", name: "Pittsburgh", state: "PA", label: "Pittsburgh, PA" },
   { id: "durham", name: "Durham", state: "NC", label: "Durham, NC" },
+  { id: "buffalo", name: "Buffalo", state: "NY", label: "Buffalo, NY" },
+  { id: "wichita", name: "Wichita", state: "KS", label: "Wichita, KS" },
+  { id: "spokane", name: "Spokane", state: "WA", label: "Spokane, WA" },
+  { id: "charleston", name: "Charleston", state: "SC", label: "Charleston, SC" },
+  { id: "hartford", name: "Hartford", state: "CT", label: "Hartford, CT" },
+  { id: "cleveland", name: "Cleveland", state: "OH", label: "Cleveland, OH" },
+  { id: "colorado-springs", name: "Colorado Springs", state: "CO", label: "Colorado Springs, CO" },
+  { id: "boise", name: "Boise", state: "ID", label: "Boise, ID" },
+  { id: "greensboro", name: "Greensboro", state: "NC", label: "Greensboro, NC" },
+  { id: "jacksonville", name: "Jacksonville", state: "FL", label: "Jacksonville, FL" },
+  { id: "anaheim", name: "Anaheim", state: "CA", label: "Anaheim, CA" },
+  { id: "st-petersburg", name: "St. Petersburg", state: "FL", label: "St. Petersburg, FL" },
+  { id: "aurora", name: "Aurora", state: "CO", label: "Aurora, CO" },
+  { id: "chattanooga", name: "Chattanooga", state: "TN", label: "Chattanooga, TN" },
+  { id: "knoxville", name: "Knoxville", state: "TN", label: "Knoxville, TN" },
+  { id: "lincoln", name: "Lincoln", state: "NE", label: "Lincoln, NE" },
+  { id: "henderson", name: "Henderson", state: "NV", label: "Henderson, NV" },
+  { id: "scottsdale", name: "Scottsdale", state: "AZ", label: "Scottsdale, AZ" },
+  { id: "gilbert", name: "Gilbert", state: "AZ", label: "Gilbert, AZ" },
+  { id: "chandler", name: "Chandler", state: "AZ", label: "Chandler, AZ" },
+  { id: "tempe", name: "Tempe", state: "AZ", label: "Tempe, AZ" },
+  { id: "tallahassee", name: "Tallahassee", state: "FL", label: "Tallahassee, FL" },
+  { id: "fort-lauderdale", name: "Fort Lauderdale", state: "FL", label: "Fort Lauderdale, FL" },
+  { id: "overland-park", name: "Overland Park", state: "KS", label: "Overland Park, KS" },
+  { id: "frisco", name: "Frisco", state: "TX", label: "Frisco, TX" },
+  { id: "tacoma", name: "Tacoma", state: "WA", label: "Tacoma, WA" },
+  { id: "norfolk", name: "Norfolk", state: "VA", label: "Norfolk, VA" },
+  { id: "savannah", name: "Savannah", state: "GA", label: "Savannah, GA" },
+  { id: "cary", name: "Cary", state: "NC", label: "Cary, NC" },
+  { id: "peoria", name: "Peoria", state: "AZ", label: "Peoria, AZ" },
+  { id: "salt-lake-city", name: "Salt Lake City", state: "UT", label: "Salt Lake City, UT" },
+  { id: "sioux-falls", name: "Sioux Falls", state: "SD", label: "Sioux Falls, SD" },
+  { id: "wilmington", name: "Wilmington", state: "NC", label: "Wilmington, NC" },
 ];
 
 export type Trade =
@@ -129,7 +162,7 @@ export interface UserProfile {
   email: string;
   metro: string;
   primaryTrade: Trade | null;
-  plan: "free" | "starter" | "pro" | "growth";
+  plan: "free" | "paid";
   trialEndsAt: string | null;
   savedLeadsCount: number;
 }
@@ -140,8 +173,6 @@ export interface PricingPlan {
   price: number;
   description: string;
   features: string[];
-  metros: number;
-  trades: number;
   highlighted?: boolean;
 }
 
@@ -160,58 +191,17 @@ export const TRADES: Trade[] = [
 
 export const PRICING_PLANS: PricingPlan[] = [
   {
-    id: "starter",
-    name: "Starter",
-    price: 199,
-    description: "For solo contractors getting started with lead generation",
-    metros: 1,
-    trades: 1,
-    features: [
-      "1 metro area",
-      "1 trade filter",
-      "Full GC name, phone & email",
-      "Full permit history",
-      "Weekly email digest",
-      "CSV export",
-      "Unlimited saved leads",
-    ],
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    price: 349,
-    description: "For growing teams tracking multiple trades",
-    metros: 1,
-    trades: 3,
+    id: "paid",
+    name: "Paid",
+    price: 79,
+    description: "Full access to win more work",
     highlighted: true,
     features: [
-      "1 metro area",
-      "Up to 3 trade filters",
       "Full GC name, phone & email",
-      "Enhanced contact enrichment",
-      "Full permit history",
+      "Unlimited saved leads",
+      "All metros & trades",
       "Weekly email digest",
       "CSV export",
-      "Unlimited saved leads",
-    ],
-  },
-  {
-    id: "growth",
-    name: "Growth",
-    price: 499,
-    description: "For companies expanding across markets",
-    metros: 2,
-    trades: 4,
-    features: [
-      "2 metro areas",
-      "Up to 4 trade filters",
-      "Full GC name, phone & email",
-      "Enhanced contact enrichment",
-      "Full permit history",
-      "Priority support",
-      "Weekly email digest",
-      "CSV export",
-      "Unlimited saved leads",
     ],
   },
 ];

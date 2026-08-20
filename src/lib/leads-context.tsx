@@ -34,7 +34,7 @@ interface LeadsContextValue {
 
 const LeadsContext = createContext<LeadsContextValue | null>(null);
 
-const FREE_LIMIT = 15;
+const FREE_LIMIT = 5;
 
 interface DbLead {
   permit_id: string;
