@@ -4295,6 +4295,299 @@ const santaMonicaCA: CityAdapter = {
   },
 };
 
+const rentonWA: CityAdapter = {
+  domain: "",
+  datasetId: "",
+  city: "Renton",
+  state: "WA",
+  buildUrl(dateStr: string) {
+    const where = encodeURIComponent(`KIND='Commercial' AND ISSUEDATE >= timestamp '${dateStr} 00:00:00'`);
+    return `https://gismaps.rentonwa.gov/as03/rest/services/Operational/PermitsAndConstruction/MapServer/7/query?where=${where}&outFields=PERMITNUMBER,GISADDRESS,APPLYDATE,ISSUEDATE,DESCRIPTION,VALUE,STATUS,FRIENDLY_STATUS,PERMITTYPE&outSR=4326&returnGeometry=true&resultRecordCount=200&orderByFields=ISSUEDATE+DESC&f=json`;
+  },
+  buildQuery() { return new URLSearchParams(); },
+  parseResponse(json: unknown) { return parseArcGISResponse(json); },
+  toPermit(r, idx) {
+    const desc = r.DESCRIPTION || r.PROJECT_NAME || "";
+    if (!desc) return null;
+    const value = parseFloat(r.VALUE || "0");
+    return {
+      id: `ren-${r.PERMITNUMBER || idx}`,
+      permitNumber: r.PERMITNUMBER || `REN-${idx}`,
+      address: r.GISADDRESS || "Renton, WA",
+      city: "Renton",
+      state: "WA",
+      zip: "98057",
+      latitude: parseFloat(r._lat || "47.4829"),
+      longitude: parseFloat(r._lng || "-122.2171"),
+      filingDate: r.ISSUEDATE ? new Date(parseInt(r.ISSUEDATE)).toISOString().split("T")[0] : dateNDaysAgo(0),
+      description: desc,
+      estimatedValue: value || 100000,
+      status: mapStatus(r.FRIENDLY_STATUS || r.STATUS),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "gismaps.rentonwa.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const bellevueWA: CityAdapter = {
+  domain: "",
+  datasetId: "",
+  city: "Bellevue",
+  state: "WA",
+  buildUrl(dateStr: string) {
+    const where = encodeURIComponent(`PERMITTYPE IN ('BA','BB','BM','BW','BY','BZ') AND APPLIEDDATE >= timestamp '${dateStr} 00:00:00'`);
+    return `https://services1.arcgis.com/EYzEZbDhXZjURPbP/arcgis/rest/services/Bellevue_Permits/FeatureServer/0/query?where=${where}&outFields=PERMITNUMBER,PERMITTYPEDESCRIPTION,SITEADDRESS,PERMITSTATUS,APPLIEDDATE,ISSUEDDATE,VALUATION,PROJECTNAME,PROJECTDESCRIPTION,CONTRACTOR&outSR=4326&returnGeometry=true&resultRecordCount=200&orderByFields=APPLIEDDATE+DESC&f=json`;
+  },
+  buildQuery() { return new URLSearchParams(); },
+  parseResponse(json: unknown) { return parseArcGISResponse(json); },
+  toPermit(r, idx) {
+    const desc = r.PROJECTDESCRIPTION || r.PROJECTNAME || r.PERMITTYPEDESCRIPTION || "";
+    if (!desc) return null;
+    const value = parseFloat(r.VALUATION || "0");
+    return {
+      id: `bvue-${r.PERMITNUMBER || idx}`,
+      permitNumber: r.PERMITNUMBER || `BVU-${idx}`,
+      address: r.SITEADDRESS || "Bellevue, WA",
+      city: "Bellevue",
+      state: "WA",
+      zip: "98004",
+      latitude: parseFloat(r._lat || "47.6101"),
+      longitude: parseFloat(r._lng || "-122.2015"),
+      filingDate: r.APPLIEDDATE ? new Date(parseInt(r.APPLIEDDATE)).toISOString().split("T")[0] : dateNDaysAgo(0),
+      description: desc,
+      estimatedValue: value || 100000,
+      status: mapStatus(r.PERMITSTATUS),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: r.CONTRACTOR || "Unknown Contractor", contactName: null, phone: null, email: null, confidence: (r.CONTRACTOR ? "Medium" : "Low") as ContactConfidence },
+      source: "arcgis.com/Bellevue_Permits",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const everettWA: CityAdapter = {
+  domain: "data.everettwa.gov",
+  datasetId: "3w3u-656c",
+  city: "Everett",
+  state: "WA",
+  buildQuery(dateStr) {
+    return new URLSearchParams({
+      $where: `permittype='COMMERCIAL BUILDING' AND issueddate > '${dateStr}T00:00:00'`,
+      $order: "issueddate DESC",
+      $limit: "200",
+    });
+  },
+  toPermit(r, idx) {
+    const desc = r.permitdesc || r.permitsubtype || "";
+    if (!desc) return null;
+    const value = parseFloat(r.jobvalue || "0");
+    const geo = r.geocoded_column as { coordinates?: number[] } | undefined;
+    const lat = geo?.coordinates?.[1] || 47.9790;
+    const lng = geo?.coordinates?.[0] || -122.2021;
+    return {
+      id: `evt-${r.permitno || idx}`,
+      permitNumber: r.permitno || `EVT-${idx}`,
+      address: r.siteaddress || "Everett, WA",
+      city: "Everett",
+      state: "WA",
+      zip: "98201",
+      latitude: lat,
+      longitude: lng,
+      filingDate: r.issueddate ? r.issueddate.split("T")[0] : dateNDaysAgo(0),
+      description: desc,
+      estimatedValue: value || 100000,
+      status: mapStatus(r.permitstatus || "Issued"),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: r.contractorname || "Unknown Contractor", contactName: r.applicantname || null, phone: null, email: null, confidence: (r.contractorname ? "Medium" : "Low") as ContactConfidence },
+      source: "data.everettwa.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const worcesterMA: CityAdapter = {
+  domain: "",
+  datasetId: "",
+  city: "Worcester",
+  state: "MA",
+  buildUrl() {
+    const where = encodeURIComponent(`Occupancy_Type IN ('Commercial','Commercial / Mixed Use')`);
+    return `https://services1.arcgis.com/j8dqo2DJE7mVUBU1/arcgis/rest/services/Building_Permits/FeatureServer/0/query?where=${where}&outFields=Record__,Record_Type,Permit_For,Date_Submitted,Record_Status,Address,Occupancy_Type,Permit_License_Issued_Date,Contractor_Name&outSR=4326&returnGeometry=true&resultRecordCount=200&f=json`;
+  },
+  buildQuery() { return new URLSearchParams(); },
+  parseResponse(json: unknown) { return parseArcGISResponse(json); },
+  toPermit(r, idx) {
+    const desc = r.Permit_For || r.Record_Type || "";
+    if (!desc) return null;
+    return {
+      id: `wrc-${r.Record__ || idx}`,
+      permitNumber: r.Record__ || `WRC-${idx}`,
+      address: r.Address || "Worcester, MA",
+      city: "Worcester",
+      state: "MA",
+      zip: "01608",
+      latitude: parseFloat(r._lat || "42.2626"),
+      longitude: parseFloat(r._lng || "-71.8023"),
+      filingDate: r.Permit_License_Issued_Date || r.Date_Submitted || dateNDaysAgo(0),
+      description: desc,
+      estimatedValue: 100000,
+      status: mapStatus(r.Record_Status),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: r.Contractor_Name || "Unknown Contractor", contactName: null, phone: null, email: null, confidence: (r.Contractor_Name && r.Contractor_Name !== "N/A" ? "Medium" : "Low") as ContactConfidence },
+      source: "arcgis.com/Worcester",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const howardCountyMD: CityAdapter = {
+  domain: "opendata.howardcountymd.gov",
+  datasetId: "kvz2-j5cj",
+  city: "Howard County",
+  state: "MD",
+  buildQuery(dateStr) {
+    return new URLSearchParams({
+      $where: `category='COMMERCIAL' AND issue_date >= '${dateStr}T00:00:00.000'`,
+      $order: "issue_date DESC",
+      $limit: "200",
+    });
+  },
+  toPermit(r, idx) {
+    const desc = r.permit_type || r.type || "";
+    if (!desc) return null;
+    return {
+      id: `hco-${r.permit_number || idx}`,
+      permitNumber: r.permit_number || `HCO-${idx}`,
+      address: `${r.city || "Columbia"}, MD ${r.zip || "21044"}`,
+      city: r.city || "Columbia",
+      state: "MD",
+      zip: r.zip || "21044",
+      latitude: 39.2037,
+      longitude: -76.8610,
+      filingDate: r.issue_date ? r.issue_date.split("T")[0] : dateNDaysAgo(0),
+      description: desc,
+      estimatedValue: 100000,
+      status: "Approved",
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "opendata.howardcountymd.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const longBeachCA: CityAdapter = {
+  domain: "",
+  datasetId: "",
+  city: "Long Beach",
+  state: "CA",
+  buildUrl() {
+    const where = encodeURIComponent(`USER_Project_Type___Display IN ('Commercial','Industrial','Mixed Use')`);
+    return `https://services6.arcgis.com/yCArG7wGXGyWLqav/arcgis/rest/services/Development_Projects_(Public)/FeatureServer/0/query?where=${where}&outFields=*&outSR=4326&returnGeometry=true&resultRecordCount=200&f=json`;
+  },
+  buildQuery() { return new URLSearchParams(); },
+  parseResponse(json: unknown) { return parseArcGISResponse(json); },
+  toPermit(r, idx) {
+    const desc = r.USER_Project_Description___Display || r.USER_Project_Name___Display || "";
+    if (!desc) return null;
+    return {
+      id: `lbc-${r.USER_Case_File_Number___Display || idx}`,
+      permitNumber: r.USER_Case_File_Number___Display || `LBC-${idx}`,
+      address: r.USER_Address___Display || r.USER_Project_Name___Display || "Long Beach, CA",
+      city: "Long Beach",
+      state: "CA",
+      zip: "90802",
+      latitude: parseFloat(r._lat || "33.7701"),
+      longitude: parseFloat(r._lng || "-118.1937"),
+      filingDate: r.USER_Date_Filed___Display ? new Date(parseInt(r.USER_Date_Filed___Display)).toISOString().split("T")[0] : dateNDaysAgo(0),
+      description: desc,
+      estimatedValue: 100000,
+      status: mapStatus(r.USER_Current_Stage___Display),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "arcgis.com/LongBeach",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const stocktonCA: CityAdapter = {
+  domain: "data.stocktonca.gov",
+  datasetId: "pmmp-k8nq",
+  city: "Stockton",
+  state: "CA",
+  buildQuery(dateStr) {
+    return new URLSearchParams({
+      $where: `record_type='Commercial' AND issued >= '${dateStr}T00:00:00.000'`,
+      $order: "issued DESC",
+      $limit: "200",
+    });
+  },
+  toPermit(r, idx) {
+    const desc = r.commercial_permit_detail || r.record_type || "";
+    if (!desc) return null;
+    const value = parseFloat(r.job_value || "0");
+    const geo = r.geocoded_location as { coordinates?: number[] } | undefined;
+    const lat = geo?.coordinates?.[1] || 37.9577;
+    const lng = geo?.coordinates?.[0] || -121.2908;
+    return {
+      id: `stk-${r.record_id || idx}`,
+      permitNumber: r.record_id || `STK-${idx}`,
+      address: r.addr_full_line || "Stockton, CA",
+      city: "Stockton",
+      state: "CA",
+      zip: "95202",
+      latitude: lat,
+      longitude: lng,
+      filingDate: r.issued ? r.issued.split("T")[0] : dateNDaysAgo(0),
+      description: desc,
+      estimatedValue: value || 100000,
+      status: "Approved",
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "data.stocktonca.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const fortCollins: CityAdapter = {
+  domain: "",
+  datasetId: "",
+  city: "Fort Collins",
+  state: "CO",
+  buildUrl() {
+    const where = encodeURIComponent(`PERMITTYPE LIKE 'Commercial%'`);
+    return `https://services1.arcgis.com/dLpFH5mwVvxSN4OE/arcgis/rest/services/Building_Permits/FeatureServer/0/query?where=${where}&outFields=PERMITNUM,PERMITTYPE,B1_APPL_STATUS,B1_WORK_DESC,ADDRESS,MATCH_ADDR,ZIP&outSR=4326&returnGeometry=true&resultRecordCount=200&f=json`;
+  },
+  buildQuery() { return new URLSearchParams(); },
+  parseResponse(json: unknown) { return parseArcGISResponse(json); },
+  toPermit(r, idx) {
+    const desc = r.B1_WORK_DESC || r.PERMITTYPE || "";
+    if (!desc) return null;
+    return {
+      id: `ftc-${r.PERMITNUM || idx}`,
+      permitNumber: r.PERMITNUM || `FTC-${idx}`,
+      address: r.ADDRESS || r.MATCH_ADDR || "Fort Collins, CO",
+      city: "Fort Collins",
+      state: "CO",
+      zip: r.ZIP || "80521",
+      latitude: parseFloat(r._lat || "40.5853"),
+      longitude: parseFloat(r._lng || "-105.0844"),
+      filingDate: dateNDaysAgo(0),
+      description: desc,
+      estimatedValue: 100000,
+      status: mapStatus(r.B1_APPL_STATUS),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "arcgis.com/FortCollins",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
 const planoTX: CityAdapter = {
   domain: "data.texas.gov",
   datasetId: "82ee-gbj5",
@@ -4476,6 +4769,14 @@ export const METRO_ADAPTERS: Record<string, CityAdapter[]> = {
   richardson: [richardsonTX],
   "santa-monica": [santaMonicaCA],
   cambridge: [cambridgeMA],
+  renton: [rentonWA],
+  bellevue: [bellevueWA],
+  "fort-collins": [fortCollins],
+  everett: [everettWA],
+  worcester: [worcesterMA],
+  "howard-county": [howardCountyMD],
+  "long-beach": [longBeachCA],
+  stockton: [stocktonCA],
 };
 
 export async function fetchAdapter(adapter: CityAdapter, dateStr: string): Promise<Permit[]> {
