@@ -120,6 +120,7 @@ export const METROS: Metro[] = [
   { id: "knoxville", name: "Knoxville", state: "TN", label: "Knoxville, TN" },
   { id: "lake-oswego", name: "Lake Oswego", state: "OR", label: "Lake Oswego, OR" },
   { id: "lakewood", name: "Lakewood", state: "CO", label: "Lakewood, CO" },
+  { id: "laredo", name: "Laredo", state: "TX", label: "Laredo, TX" },
   { id: "largo", name: "Largo", state: "FL", label: "Largo, FL" },
   { id: "las-vegas", name: "Las Vegas", state: "NV", label: "Las Vegas, NV" },
   { id: "league-city", name: "League City", state: "TX", label: "League City, TX" },
