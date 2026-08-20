@@ -4215,6 +4215,86 @@ const mckinneyTX: CityAdapter = {
   },
 };
 
+const planoTX: CityAdapter = {
+  domain: "data.texas.gov",
+  datasetId: "82ee-gbj5",
+  city: "Plano",
+  state: "TX",
+  buildUrl(dateStr: string) {
+    const params = new URLSearchParams({
+      "$where": `situscity='PLANO' AND proprescom='Commercial' AND permitissueddate>'${dateStr}T00:00:00.000'`,
+      "$order": "permitissueddate DESC",
+      "$limit": "200",
+    });
+    return `https://data.texas.gov/resource/82ee-gbj5.json?${params}`;
+  },
+  buildQuery() { return new URLSearchParams(); },
+  toPermit(r, idx) {
+    const desc = r.permitcomments || r.permittypedescr || "";
+    if (!desc) return null;
+    const value = parseFloat(r.permitvalue || "0");
+    const addr = r.situsconcat || r.situsconcatshort || "Plano, TX";
+    return {
+      id: `pln-${r.permitnum || idx}`,
+      permitNumber: r.permitnum || `PLN-${idx}`,
+      address: addr,
+      city: "Plano",
+      state: "TX",
+      zip: r.situszip || "75023",
+      latitude: 33.0198,
+      longitude: -96.6989,
+      filingDate: r.permitissueddate ? r.permitissueddate.split("T")[0] : dateNDaysAgo(0),
+      description: desc,
+      estimatedValue: value || 100000,
+      status: "Issued" as PermitStatus,
+      trades: classifyTrades(desc),
+      gcContact: { companyName: r.permitbuildername || "Unknown Contractor", contactName: null, phone: null, email: null, confidence: (r.permitbuildername ? "Medium" : "Low") as ContactConfidence },
+      source: "data.texas.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const richardsonTX: CityAdapter = {
+  domain: "data.texas.gov",
+  datasetId: "82ee-gbj5",
+  city: "Richardson",
+  state: "TX",
+  buildUrl(dateStr: string) {
+    const params = new URLSearchParams({
+      "$where": `situscity='RICHARDSON' AND proprescom='Commercial' AND permitissueddate>'${dateStr}T00:00:00.000'`,
+      "$order": "permitissueddate DESC",
+      "$limit": "200",
+    });
+    return `https://data.texas.gov/resource/82ee-gbj5.json?${params}`;
+  },
+  buildQuery() { return new URLSearchParams(); },
+  toPermit(r, idx) {
+    const desc = r.permitcomments || r.permittypedescr || "";
+    if (!desc) return null;
+    const value = parseFloat(r.permitvalue || "0");
+    const addr = r.situsconcat || r.situsconcatshort || "Richardson, TX";
+    return {
+      id: `rch-${r.permitnum || idx}`,
+      permitNumber: r.permitnum || `RCH-${idx}`,
+      address: addr,
+      city: "Richardson",
+      state: "TX",
+      zip: r.situszip || "75080",
+      latitude: 32.9483,
+      longitude: -96.7299,
+      filingDate: r.permitissueddate ? r.permitissueddate.split("T")[0] : dateNDaysAgo(0),
+      description: desc,
+      estimatedValue: value || 100000,
+      status: "Issued" as PermitStatus,
+      trades: classifyTrades(desc),
+      gcContact: { companyName: r.permitbuildername || "Unknown Contractor", contactName: null, phone: null, email: null, confidence: (r.permitbuildername ? "Medium" : "Low") as ContactConfidence },
+      source: "data.texas.gov",
+      sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
 export const METRO_ADAPTERS: Record<string, CityAdapter[]> = {
   chicago: [chicago],
   austin: [austin],
@@ -4312,6 +4392,8 @@ export const METRO_ADAPTERS: Record<string, CityAdapter[]> = {
   "sugar-land": [sugarLandTX],
   "san-marcos-tx": [sanMarcosTX],
   mckinney: [mckinneyTX],
+  plano: [planoTX],
+  richardson: [richardsonTX],
 };
 
 export async function fetchAdapter(adapter: CityAdapter, dateStr: string): Promise<Permit[]> {
