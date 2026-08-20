@@ -665,8 +665,7 @@ const denver: CityAdapter = {
   state: "CO",
   buildQuery() { return new URLSearchParams(); },
   buildUrl(dateStr) {
-    const ts = new Date(dateStr).getTime();
-    const where = encodeURIComponent(`DATE_ISSUED > ${ts}`);
+    const where = encodeURIComponent(`DATE_ISSUED > timestamp '${dateStr} 00:00:00'`);
     return `https://services1.arcgis.com/zdB7qR0BtYrg0Xpl/arcgis/rest/services/ODC_DEV_COMMERCIALCONSTPERMIT_P/FeatureServer/317/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=DATE_ISSUED+DESC`;
   },
   parseResponse: parseArcGISResponse,
@@ -842,9 +841,8 @@ const fortWorth: CityAdapter = {
   state: "TX",
   buildQuery() { return new URLSearchParams(); },
   buildUrl(dateStr) {
-    const ts = new Date(dateStr).getTime();
-    const where = encodeURIComponent(`File_Date > ${ts} AND Permit_Type = 'Commercial Building Permit'`);
-    return `https://mapit.fortworthtexas.gov/ags/rest/services/CIVIC/Permits/MapServer/0/query?where=${where}&outFields=*&f=json&resultRecordCount=200&orderByFields=File_Date+DESC`;
+    const where = encodeURIComponent(`File_Date > timestamp '${dateStr} 00:00:00' AND Permit_Type = 'Commercial Building Permit'`);
+    return `https://mapit.fortworthtexas.gov/ags/rest/services/CIVIC/Permits/MapServer/0/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=File_Date+DESC`;
   },
   parseResponse: parseArcGISResponse,
   toPermit(r, idx) {
@@ -1035,8 +1033,7 @@ const phoenix: CityAdapter = {
   state: "AZ",
   buildQuery() { return new URLSearchParams(); },
   buildUrl(dateStr) {
-    const ts = new Date(dateStr).getTime();
-    const where = encodeURIComponent(`SCOPE_DESC LIKE '%COMMERCIAL%' AND PER_ISSUE_DATE >= ${ts}`);
+    const where = encodeURIComponent(`SCOPE_DESC LIKE '%COMMERCIAL%' AND PER_ISSUE_DATE > timestamp '${dateStr} 00:00:00'`);
     return `https://maps.phoenix.gov/pub/rest/services/Public/Planning_Permit/MapServer/1/query?where=${where}&outFields=*&returnGeometry=true&outSR=4326&f=json&resultRecordCount=200&orderByFields=PER_ISSUE_DATE+DESC`;
   },
   parseResponse: parseArcGISResponse,
@@ -3535,6 +3532,342 @@ const wilmington: CityAdapter = {
   },
 };
 
+const stPaul: CityAdapter = {
+  domain: "services1.arcgis.com",
+  datasetId: "st-paul-permits",
+  city: "St. Paul",
+  state: "MN",
+  buildQuery() { return new URLSearchParams(); },
+  buildUrl(dateStr) {
+    const where = encodeURIComponent(`WORK_TYPE LIKE 'Commercial%' AND ISSUEDATE >= timestamp '${dateStr} 00:00:00'`);
+    return `https://services1.arcgis.com/9meaaHE3uiba0zr8/arcgis/rest/services/Approved_Building_Permits/FeatureServer/0/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=ISSUEDATE+DESC`;
+  },
+  parseResponse: parseArcGISResponse,
+  toPermit(r, idx) {
+    const desc = r.FOLDERDESCRIPTION || r.WORK_TYPE || "Commercial construction";
+    const value = parseFloat(r.EST_VALUE_OF_WORK || "0");
+    if (value > 0 && value < 50000) return null;
+    const gcName = r.CONTRACTORNAME || "Unknown Contractor";
+    let filingDate = dateNDaysAgo(0);
+    if (r.ISSUEDATE) { const d = new Date(Number(r.ISSUEDATE)); if (!isNaN(d.getTime())) filingDate = d.toISOString().split("T")[0]; }
+    const lat = parseFloat(r.LATITUE || r._geo_y || "44.9537");
+    const lng = parseFloat(r.LONGITUTE || r._geo_x || "-93.09");
+    return {
+      id: `stp-${r.PERMITNUMBER || idx}`,
+      permitNumber: r.PERMITNUMBER || `STP-${idx}`,
+      address: r.ADDRESS || "St. Paul, MN",
+      city: "St. Paul", state: "MN", zip: "55101",
+      latitude: lat, longitude: lng,
+      filingDate, description: desc, estimatedValue: value || 100000,
+      status: mapStatus(r.STATUS),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: gcName, contactName: null, phone: null, email: null, confidence: (gcName === "Unknown Contractor" ? "Low" : "Medium") as ContactConfidence },
+      source: "information.stpaul.gov", sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const naperville: CityAdapter = {
+  domain: "services1.arcgis.com",
+  datasetId: "naperville-permits",
+  city: "Naperville",
+  state: "IL",
+  buildQuery() { return new URLSearchParams(); },
+  buildUrl(dateStr) {
+    const where = encodeURIComponent(`PERMITTYPE='COMMERCIAL' AND ISSUEDATE >= timestamp '${dateStr} 00:00:00'`);
+    return `https://services1.arcgis.com/rXJ6QApc2sOtl1Pd/arcgis/rest/services/Building_Permits_View/FeatureServer/0/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=ISSUEDATE+DESC`;
+  },
+  parseResponse: parseArcGISResponse,
+  toPermit(r, idx) {
+    const desc = r.DESCRIPTION || r.PERMITWORKCLASS || "Commercial construction";
+    if (isLikelyResidential(desc)) return null;
+    const value = parseFloat(r.PERMITVALUATION || "0");
+    if (value > 0 && value < 50000) return null;
+    let filingDate = dateNDaysAgo(0);
+    if (r.ISSUEDATE) { const d = new Date(Number(r.ISSUEDATE)); if (!isNaN(d.getTime())) filingDate = d.toISOString().split("T")[0]; }
+    const parts = [r.STREETNUMBER, r.PREDIRECTION, r.STREETNAME, r.STREETTYPE, r.UNITORSUITE].filter(Boolean);
+    const address = parts.join(" ") || "Naperville, IL";
+    return {
+      id: `nap-${r.PERMITNUMBER || idx}`,
+      permitNumber: r.PERMITNUMBER || `NAP-${idx}`,
+      address, city: "Naperville", state: "IL", zip: r.POSTALCODE || "60540",
+      latitude: parseFloat(r._geo_y || "41.7508"), longitude: parseFloat(r._geo_x || "-88.1535"),
+      filingDate, description: desc, estimatedValue: value || 100000,
+      status: mapStatus(r.PERMITSTATUS),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "naperville.il.us", sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const salemOR: CityAdapter = {
+  domain: "services.arcgis.com",
+  datasetId: "salem-permits",
+  city: "Salem",
+  state: "OR",
+  buildQuery() { return new URLSearchParams(); },
+  buildUrl(dateStr) {
+    const where = encodeURIComponent(`SUBDESCRIPTION='Commercial' AND ISSUEDDATE >= timestamp '${dateStr} 00:00:00'`);
+    return `https://services.arcgis.com/kIA6yS9KDGqZL7U3/arcgis/rest/services/Structure_Permits/FeatureServer/0/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=ISSUEDDATE+DESC`;
+  },
+  parseResponse: parseArcGISResponse,
+  toPermit(r, idx) {
+    const desc = r.FOLDERDESCRIPTION || r.WORKDESCRIPTION || r.MAPDESCRIPTION || "Commercial construction";
+    if (isLikelyResidential(desc)) return null;
+    let filingDate = dateNDaysAgo(0);
+    if (r.ISSUEDDATE) { const d = new Date(Number(r.ISSUEDDATE)); if (!isNaN(d.getTime())) filingDate = d.toISOString().split("T")[0]; }
+    return {
+      id: `sal-${r.FOLDERNUMBER || idx}`,
+      permitNumber: r.FOLDERNUMBER || `SAL-${idx}`,
+      address: r.PROPERTYADDRESS || "Salem, OR",
+      city: "Salem", state: "OR", zip: "97301",
+      latitude: parseFloat(r._geo_y || "44.9429"), longitude: parseFloat(r._geo_x || "-123.0351"),
+      filingDate, description: desc, estimatedValue: 100000,
+      status: mapStatus(r.STATUS),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "cityofsalem.net", sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const capeCoral: CityAdapter = {
+  domain: "capeims.capecoral.gov",
+  datasetId: "cape-coral-permits",
+  city: "Cape Coral",
+  state: "FL",
+  buildQuery() { return new URLSearchParams(); },
+  buildUrl(dateStr) {
+    const where = encodeURIComponent(`Permit_Type LIKE '%Commercial%' AND issuedate >= timestamp '${dateStr} 00:00:00'`);
+    return `https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/1/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=issuedate+DESC`;
+  },
+  parseResponse: parseArcGISResponse,
+  toPermit(r, idx) {
+    const desc = r.permit_desc || r.Permit_Type || "Commercial construction";
+    if (isLikelyResidential(desc)) return null;
+    const value = parseFloat(r.permitvalue || "0");
+    if (value > 0 && value < 50000) return null;
+    const gcName = r.Company_Name || r.Contractor || "Unknown Contractor";
+    let filingDate = dateNDaysAgo(0);
+    if (r.issuedate) { const d = new Date(Number(r.issuedate)); if (!isNaN(d.getTime())) filingDate = d.toISOString().split("T")[0]; }
+    const parts = [r.Addr1, r.Predir, r.Addr2, r.Street_Type].filter(Boolean);
+    const address = parts.join(" ") || "Cape Coral, FL";
+    return {
+      id: `cc-${r.Permit_Number || idx}`,
+      permitNumber: r.Permit_Number || `CC-${idx}`,
+      address, city: "Cape Coral", state: "FL", zip: r.Zip || "33904",
+      latitude: parseFloat(r._geo_y || "26.5629"), longitude: parseFloat(r._geo_x || "-81.9495"),
+      filingDate, description: desc, estimatedValue: value || 100000,
+      status: mapStatus(r.permit_status),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: gcName, contactName: r.Contractor || null, phone: null, email: null, confidence: (gcName === "Unknown Contractor" ? "Low" : "Medium") as ContactConfidence },
+      source: "capecoral.gov", sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const palmBay: CityAdapter = {
+  domain: "gis.palmbayflorida.org",
+  datasetId: "palm-bay-permits",
+  city: "Palm Bay",
+  state: "FL",
+  buildQuery() { return new URLSearchParams(); },
+  buildUrl(dateStr) {
+    const where = encodeURIComponent(`ApplicationType LIKE '%COMMERCIAL%' AND issueDate >= timestamp '${dateStr} 00:00:00'`);
+    return `https://gis.palmbayflorida.org/arcgis/rest/services/GrowthManagement/BuildingPermits/FeatureServer/0/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=issueDate+DESC`;
+  },
+  parseResponse: parseArcGISResponse,
+  toPermit(r, idx) {
+    const desc = r.ApplicationDescription || r.ApplicationType || "Commercial construction";
+    if (isLikelyResidential(desc)) return null;
+    const value = parseFloat(r.EstimateValuation || "0");
+    if (value > 0 && value < 50000) return null;
+    let filingDate = dateNDaysAgo(0);
+    if (r.issueDate) { const d = new Date(Number(r.issueDate)); if (!isNaN(d.getTime())) filingDate = d.toISOString().split("T")[0]; }
+    return {
+      id: `pb-${r.ApplicationNumber?.trim() || idx}`,
+      permitNumber: r.ApplicationNumber?.trim() || `PB-${idx}`,
+      address: r.ADDRESS || "Palm Bay, FL",
+      city: "Palm Bay", state: "FL", zip: "32905",
+      latitude: parseFloat(r._geo_y || "28.0345"), longitude: parseFloat(r._geo_x || "-80.5887"),
+      filingDate, description: desc, estimatedValue: value || 100000,
+      status: mapStatus(r.PermitStatus),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "palmbayflorida.org", sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const gainesvilleFL: CityAdapter = {
+  domain: "data.cityofgainesville.org",
+  datasetId: "p798-x3nx",
+  city: "Gainesville",
+  state: "FL",
+  buildQuery(dateStr) {
+    return new URLSearchParams({
+      $where: `classification='Commercial' AND issue >= '${dateStr}T00:00:00.000'`,
+      $order: "issue DESC",
+      $limit: "200",
+    });
+  },
+  toPermit(r, idx) {
+    const desc = [r.type, r.subtype].filter(Boolean).join(" - ") || "Commercial construction";
+    if (isLikelyResidential(desc)) return null;
+    const gcName = r.business || r.contractor || "Unknown Contractor";
+    return {
+      id: `gnv-${r.permit || idx}`,
+      permitNumber: r.permit || `GNV-${idx}`,
+      address: r.address || "Gainesville, FL",
+      city: "Gainesville", state: "FL", zip: "32601",
+      latitude: parseFloat(r.latitude || "29.6516"), longitude: parseFloat(r.longitude || "-82.3248"),
+      filingDate: r.issue ? r.issue.split("T")[0] : dateNDaysAgo(0),
+      description: desc, estimatedValue: 100000,
+      status: "Issued" as PermitStatus,
+      trades: classifyTrades(desc),
+      gcContact: { companyName: gcName, contactName: r.contractor || null, phone: null, email: null, confidence: (gcName === "Unknown Contractor" ? "Low" : "Medium") as ContactConfidence },
+      source: "data.cityofgainesville.org", sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const coronaCA: CityAdapter = {
+  domain: "corstat.coronaca.gov",
+  datasetId: "2agx-camz",
+  city: "Corona",
+  state: "CA",
+  buildQuery(dateStr) {
+    return new URLSearchParams({
+      $where: `permittype like '%COMMERCIAL%' AND issued >= '${dateStr}T00:00:00.000'`,
+      $order: "issued DESC",
+      $limit: "200",
+    });
+  },
+  toPermit(r, idx) {
+    const desc = r.description || r.notes || r.permittype || "Commercial construction";
+    if (isLikelyResidential(desc)) return null;
+    const value = parseFloat(r.jobvalue || "0");
+    if (value > 0 && value < 50000) return null;
+    const lat = r.geolocation ? parseFloat((r.geolocation as unknown as { latitude?: string })?.latitude || "33.8753") : 33.8753;
+    const lng = r.geolocation ? parseFloat((r.geolocation as unknown as { longitude?: string })?.longitude || "-117.5664") : -117.5664;
+    return {
+      id: `cor-${r.permit_no || idx}`,
+      permitNumber: r.permit_no || `COR-${idx}`,
+      address: r.site_addr || "Corona, CA",
+      city: "Corona", state: "CA", zip: r.site_zip || "92882",
+      latitude: lat, longitude: lng,
+      filingDate: r.issued ? r.issued.split("T")[0] : dateNDaysAgo(0),
+      description: desc, estimatedValue: value || 100000,
+      status: mapStatus(r.status),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "corstat.coronaca.gov", sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const rockford: CityAdapter = {
+  domain: "data.illinois.gov",
+  datasetId: "3k8p-pkx8",
+  city: "Rockford",
+  state: "IL",
+  buildQuery(dateStr) {
+    const mmddyyyy = `${dateStr.slice(5, 7)}/${dateStr.slice(8, 10)}/${dateStr.slice(0, 4)}`;
+    return new URLSearchParams({
+      $where: `permittype='Multifamily/Commercial Permits' AND dateissued1 > '${mmddyyyy}'`,
+      $order: "dateissued1 DESC",
+      $limit: "200",
+    });
+  },
+  toPermit(r, idx) {
+    const desc = r.description || r.permittype || "Commercial construction";
+    if (isLikelyResidential(desc)) return null;
+    const value = parseFloat(r.valuation || "0");
+    if (value > 0 && value < 50000) return null;
+    const gcName = r.contractorfullname || "Unknown Contractor";
+    let filingDate = dateNDaysAgo(0);
+    if (r.dateissued1) {
+      const parts = r.dateissued1.split(" ")[0].split("/");
+      if (parts.length === 3) filingDate = `${parts[2]}-${parts[0].padStart(2, "0")}-${parts[1].padStart(2, "0")}`;
+    }
+    return {
+      id: `rck-${r.permitno || idx}`,
+      permitNumber: r.permitno || `RCK-${idx}`,
+      address: r.propertyaddress || "Rockford, IL",
+      city: "Rockford", state: "IL", zip: "61101",
+      latitude: 42.2711, longitude: -89.094,
+      filingDate, description: desc, estimatedValue: value || 100000,
+      status: "Issued" as PermitStatus,
+      trades: classifyTrades(desc),
+      gcContact: { companyName: gcName, contactName: null, phone: null, email: null, confidence: (gcName === "Unknown Contractor" ? "Low" : "Medium") as ContactConfidence },
+      source: "data.illinois.gov", sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const midland: CityAdapter = {
+  domain: "services.arcgis.com",
+  datasetId: "midland-permits",
+  city: "Midland",
+  state: "TX",
+  buildQuery() { return new URLSearchParams(); },
+  buildUrl(dateStr) {
+    const where = encodeURIComponent(`PermitType='Commercial - Building' AND IssueDate >= timestamp '${dateStr} 00:00:00'`);
+    return `https://services.arcgis.com/0H6bQdxd9223gQB5/arcgis/rest/services/DevelopmentPermit/FeatureServer/0/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=IssueDate+DESC`;
+  },
+  parseResponse: parseArcGISResponse,
+  toPermit(r, idx) {
+    const desc = r.PermitClass || r.PermitType || "Commercial construction";
+    let filingDate = dateNDaysAgo(0);
+    if (r.IssueDate) { const d = new Date(Number(r.IssueDate)); if (!isNaN(d.getTime())) filingDate = d.toISOString().split("T")[0]; }
+    return {
+      id: `mid-${r.PermitNumber || idx}`,
+      permitNumber: r.PermitNumber || `MID-${idx}`,
+      address: r.Address || "Midland, TX",
+      city: "Midland", state: "TX", zip: "79701",
+      latitude: parseFloat(r._geo_y || "31.9973"), longitude: parseFloat(r._geo_x || "-102.0779"),
+      filingDate, description: desc, estimatedValue: 100000,
+      status: mapStatus(r.PermitStatus),
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "midlandtexas.gov", sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
+const omaha: CityAdapter = {
+  domain: "services.arcgis.com",
+  datasetId: "omaha-permits",
+  city: "Omaha",
+  state: "NE",
+  buildQuery() { return new URLSearchParams(); },
+  buildUrl(dateStr) {
+    const where = encodeURIComponent(`CITY='Omaha' AND Permit_Typ='C' AND Permit_Dat >= timestamp '${dateStr} 00:00:00'`);
+    return `https://services.arcgis.com/CHjpJeHqytL8t8op/arcgis/rest/services/Building_Permits_as_of_October_2019/FeatureServer/0/query?where=${where}&outFields=*&outSR=4326&f=json&resultRecordCount=200&orderByFields=Permit_Dat+DESC`;
+  },
+  parseResponse: parseArcGISResponse,
+  toPermit(r, idx) {
+    const desc = r.Permit_Typ === "C" ? "Commercial Construction" : "Construction";
+    const value = parseFloat(r.COST || "0");
+    if (value > 0 && value < 50000) return null;
+    let filingDate = dateNDaysAgo(0);
+    if (r.Permit_Dat) { const d = new Date(Number(r.Permit_Dat)); if (!isNaN(d.getTime())) filingDate = d.toISOString().split("T")[0]; }
+    return {
+      id: `oma-${r.ADDRESS?.replace(/\s/g, "-") || idx}-${r.YR || ""}`,
+      permitNumber: `OMA-${r.YR || ""}-${idx}`,
+      address: r.ADDRESS || "Omaha, NE",
+      city: "Omaha", state: "NE", zip: "68102",
+      latitude: parseFloat(r.Y || r._geo_y || "41.2565"), longitude: parseFloat(r.X || r._geo_x || "-95.9345"),
+      filingDate, description: desc, estimatedValue: value || 100000,
+      status: "Issued" as PermitStatus,
+      trades: classifyTrades(desc),
+      gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+      source: "mapacog.org", sourceUpdatedAt: dateNDaysAgo(0),
+    };
+  },
+};
+
 export const METRO_ADAPTERS: Record<string, CityAdapter[]> = {
   chicago: [chicago],
   austin: [austin],
@@ -3614,6 +3947,16 @@ export const METRO_ADAPTERS: Record<string, CityAdapter[]> = {
   "salt-lake-city": [saltLakeCity],
   "sioux-falls": [siouxFalls],
   wilmington: [wilmington],
+  "st-paul": [stPaul],
+  naperville: [naperville],
+  "salem-or": [salemOR],
+  "cape-coral": [capeCoral],
+  "palm-bay": [palmBay],
+  "gainesville-fl": [gainesvilleFL],
+  "corona-ca": [coronaCA],
+  rockford: [rockford],
+  midland: [midland],
+  omaha: [omaha],
 };
 
 export async function fetchAdapter(adapter: CityAdapter, dateStr: string): Promise<Permit[]> {
