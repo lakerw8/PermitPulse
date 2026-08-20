@@ -3,16 +3,15 @@
 
 import Link from "next/link";
 import { PermitCard } from "@/components/permit-card";
-import { usePermits } from "@/lib/permits-context";
-import { formatCurrency } from "@/lib/mock-data";
+import { MOCK_PERMITS, formatCurrency } from "@/lib/mock-data";
 import { METROS } from "@/lib/types";
 import { ArrowRight } from "lucide-react";
 
-export default function HomePage() {
-  const { permits } = usePermits();
-  const recentPermits = permits.slice(0, 4);
-  const totalValue = permits.reduce((sum, p) => sum + p.estimatedValue, 0);
+const allPermits = MOCK_PERMITS;
+const totalValue = allPermits.reduce((sum, p) => sum + p.estimatedValue, 0);
+const recentPermits = allPermits.slice(0, 4);
 
+export default function HomePage() {
   return (
     <div>
       {/* Stat-Led Hero — two-column: giant number left, qualifier right */}
@@ -23,10 +22,10 @@ export default function HomePage() {
               Live permit data
             </p>
             <div className="mt-3 font-heading text-[clamp(3.5rem,8vw,7rem)] font-bold leading-none tracking-tighter tabular-nums">
-              {permits.length}
+              {allPermits.length}
             </div>
             <p className="mt-2 font-heading text-xl font-medium tracking-tight text-foreground sm:text-2xl">
-              commercial permits tracked across {METROS.length} metros.
+              commercial permits tracked across {METROS.length} cities.
             </p>
           </div>
           <div className="max-w-lg">
@@ -57,15 +56,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Supporting stat strip — tabular numerals, hairline dividers */}
+      {/* Supporting stat strip */}
       <section className="border-b border-border">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 divide-x divide-border sm:grid-cols-4">
             {[
-              { value: `$${(totalValue / 1_000_000).toFixed(0)}M+`, label: "Total project value" },
-              { value: String(METROS.length), label: "Metros covered" },
-              { value: "10", label: "Trade categories" },
-              { value: "Daily", label: "Data refresh" },
+              { value: formatCurrency(totalValue) + "+", label: "Total pipeline value" },
+              { value: `${METROS.length}+`, label: "Cities covered" },
+              { value: "24hr", label: "Data refresh" },
+              { value: "Free", label: "To browse" },
             ].map((stat) => (
               <div key={stat.label} className="px-4 py-5 sm:px-6">
                 <div className="font-mono text-lg font-semibold tabular-nums">
@@ -92,7 +91,8 @@ export default function HomePage() {
                 Latest filings
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Commercial permits from {METROS.length} metro areas including Chicago, LA, NYC, and more.
+                Commercial permits from {METROS.length} cities including
+                Chicago, LA, NYC, and more.
               </p>
               <Link
                 href="/permits"
@@ -111,7 +111,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* How it works — step sequence (F4), not a 3-column grid */}
+      {/* How it works — step sequence */}
       <section className="border-t border-border py-14 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-[240px_1fr] lg:gap-12">
@@ -163,7 +163,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Final CTA — single line, single button */}
+      {/* Final CTA */}
       <section className="border-t border-border py-14 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">

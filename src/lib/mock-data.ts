@@ -1,4 +1,6 @@
-import { Permit } from "./types";
+import type { Permit, Trade, PermitStatus, ContactConfidence } from "./types";
+
+// ── helpers ────────────────────────────────────────────────────────────────────
 
 function daysAgo(n: number): string {
   const d = new Date();
@@ -6,2256 +8,499 @@ function daysAgo(n: number): string {
   return d.toISOString().split("T")[0];
 }
 
-const CHICAGO_PERMITS: Permit[] = [
-  {
-    id: "p-001",
-    permitNumber: "BLD-2026-041523",
-    address: "233 S Wacker Dr",
-    city: "Chicago",
-    state: "IL",
-    zip: "60606",
-    latitude: 41.8789,
-    longitude: -87.6359,
-    filingDate: daysAgo(1),
-    description:
-      "Complete HVAC system replacement for floors 12-18 of commercial office tower. Includes new rooftop units, ductwork, and building automation controls.",
-    estimatedValue: 2850000,
-    status: "Issued",
-    trades: ["HVAC"],
-    gcContact: {
-      companyName: "Turner Construction Company",
-      contactName: "Mike Reynolds",
-      phone: "(312) 555-0142",
-      email: "mreynolds@turnerconstruction.com",
-      confidence: "High",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(1),
-  },
-  {
-    id: "p-002",
-    permitNumber: "BLD-2026-041487",
-    address: "401 N Michigan Ave",
-    city: "Chicago",
-    state: "IL",
-    zip: "60611",
-    latitude: 41.8902,
-    longitude: -87.6238,
-    filingDate: daysAgo(2),
-    description:
-      "Electrical service upgrade and panel replacement for 15-story mixed-use building. New 4000A main switchgear, emergency generator, and fire alarm system.",
-    estimatedValue: 1750000,
-    status: "Issued",
-    trades: ["Electrical", "Fire Suppression"],
-    gcContact: {
-      companyName: "Pepper Construction",
-      contactName: "Sarah Chen",
-      phone: "(312) 555-0198",
-      email: "schen@pepperconstruction.com",
-      confidence: "High",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(1),
-  },
-  {
-    id: "p-003",
-    permitNumber: "BLD-2026-041390",
-    address: "1 N State St",
-    city: "Chicago",
-    state: "IL",
-    zip: "60602",
-    latitude: 41.8819,
-    longitude: -87.6278,
-    filingDate: daysAgo(3),
-    description:
-      "Interior buildout of new medical office space, 22,000 SF. Includes plumbing rough-in for exam rooms, specialized HVAC for clean rooms, and glass partition walls.",
-    estimatedValue: 3200000,
-    status: "Under Review",
-    trades: ["Plumbing", "HVAC", "Glass & Glazing"],
-    gcContact: {
-      companyName: "Power Construction",
-      contactName: "James Kowalski",
-      phone: "(312) 555-0267",
-      email: "jkowalski@powerconstruction.com",
-      confidence: "High",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(2),
-  },
-  {
-    id: "p-004",
-    permitNumber: "BLD-2026-041352",
-    address: "550 W Adams St",
-    city: "Chicago",
-    state: "IL",
-    zip: "60661",
-    latitude: 41.8793,
-    longitude: -87.6418,
-    filingDate: daysAgo(3),
-    description:
-      "Complete roof replacement on 8-story commercial building. TPO membrane system, new insulation, and parapet wall repairs.",
-    estimatedValue: 890000,
-    status: "Issued",
-    trades: ["Roofing"],
-    gcContact: {
-      companyName: "W.E. O'Neil Construction",
-      contactName: null,
-      phone: "(312) 555-0334",
-      email: null,
-      confidence: "Medium",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(3),
-  },
-  {
-    id: "p-005",
-    permitNumber: "BLD-2026-041298",
-    address: "161 N Clark St",
-    city: "Chicago",
-    state: "IL",
-    zip: "60601",
-    latitude: 41.8843,
-    longitude: -87.6311,
-    filingDate: daysAgo(4),
-    description:
-      "Fire suppression system upgrade for county building. New sprinkler heads, standpipe system, and fire pump replacement.",
-    estimatedValue: 1200000,
-    status: "Approved",
-    trades: ["Fire Suppression", "Plumbing"],
-    gcContact: {
-      companyName: "Bulley & Andrews",
-      contactName: "Tom Andersen",
-      phone: "(312) 555-0401",
-      email: "tandersen@bulley.com",
-      confidence: "High",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(3),
-  },
-  {
-    id: "p-006",
-    permitNumber: "BLD-2026-041245",
-    address: "225 W Randolph St",
-    city: "Chicago",
-    state: "IL",
-    zip: "60606",
-    latitude: 41.8847,
-    longitude: -87.6347,
-    filingDate: daysAgo(5),
-    description:
-      "New restaurant buildout in ground floor commercial space. Full kitchen hood and HVAC, grease trap plumbing, electrical for commercial kitchen equipment.",
-    estimatedValue: 680000,
-    status: "Issued",
-    trades: ["HVAC", "Plumbing", "Electrical"],
-    gcContact: {
-      companyName: "Leopardo Companies",
-      contactName: "Angela Martinez",
-      phone: "(312) 555-0488",
-      email: "amartinez@leopardo.com",
-      confidence: "High",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(4),
-  },
-  {
-    id: "p-007",
-    permitNumber: "BLD-2026-041201",
-    address: "311 S Wacker Dr",
-    city: "Chicago",
-    state: "IL",
-    zip: "60606",
-    latitude: 41.8779,
-    longitude: -87.6363,
-    filingDate: daysAgo(5),
-    description:
-      "Structural steel reinforcement for mechanical penthouse. Adding new cooling tower support structure and equipment platforms.",
-    estimatedValue: 1450000,
-    status: "Under Review",
-    trades: ["Structural Steel", "HVAC"],
-    gcContact: {
-      companyName: "Clark Construction Group",
-      contactName: "David Park",
-      phone: "(312) 555-0523",
-      email: "dpark@clarkconstruction.com",
-      confidence: "Medium",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(5),
-  },
-  {
-    id: "p-008",
-    permitNumber: "BLD-2026-041178",
-    address: "330 N Wabash Ave",
-    city: "Chicago",
-    state: "IL",
-    zip: "60611",
-    latitude: 41.8882,
-    longitude: -87.6268,
-    filingDate: daysAgo(6),
-    description:
-      "Curtain wall glass replacement on south and west facades. Approximately 4,200 SF of insulated glazing units.",
-    estimatedValue: 2100000,
-    status: "Issued",
-    trades: ["Glass & Glazing"],
-    gcContact: {
-      companyName: "Lendlease",
-      contactName: "Rachel Kim",
-      phone: "(312) 555-0589",
-      email: "rkim@lendlease.com",
-      confidence: "High",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(5),
-  },
-  {
-    id: "p-009",
-    permitNumber: "BLD-2026-041134",
-    address: "77 W Wacker Dr",
-    city: "Chicago",
-    state: "IL",
-    zip: "60601",
-    latitude: 41.8867,
-    longitude: -87.6316,
-    filingDate: daysAgo(7),
-    description:
-      "Demolition of interior partitions and ceilings floors 4-6 for tenant improvement. Includes hazmat abatement and structural modifications.",
-    estimatedValue: 520000,
-    status: "Issued",
-    trades: ["Demolition", "General Construction"],
-    gcContact: {
-      companyName: "Skender Construction",
-      contactName: null,
-      phone: "(312) 555-0612",
-      email: "info@skender.com",
-      confidence: "Low",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(6),
-  },
-  {
-    id: "p-010",
-    permitNumber: "BLD-2026-041098",
-    address: "500 W Monroe St",
-    city: "Chicago",
-    state: "IL",
-    zip: "60661",
-    latitude: 41.8804,
-    longitude: -87.6395,
-    filingDate: daysAgo(7),
-    description:
-      "New concrete parking structure, 4 levels, approximately 320 spaces. Includes electrical for EV charging stations and fire suppression throughout.",
-    estimatedValue: 8500000,
-    status: "Under Review",
-    trades: ["Concrete", "Electrical", "Fire Suppression"],
-    gcContact: {
-      companyName: "Walsh Construction",
-      contactName: "Brian O'Malley",
-      phone: "(312) 555-0678",
-      email: "bomalley@walshgroup.com",
-      confidence: "High",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(7),
-  },
-  {
-    id: "p-011",
-    permitNumber: "BLD-2026-041056",
-    address: "200 E Randolph St",
-    city: "Chicago",
-    state: "IL",
-    zip: "60601",
-    latitude: 41.8851,
-    longitude: -87.6216,
-    filingDate: daysAgo(8),
-    description:
-      "Plumbing renovation for hotel floors 8-14. Replace domestic water risers, waste stacks, and fixture rough-in for 120 guest rooms.",
-    estimatedValue: 1680000,
-    status: "Issued",
-    trades: ["Plumbing"],
-    gcContact: {
-      companyName: "Mortenson Construction",
-      contactName: "Lisa Tran",
-      phone: "(312) 555-0734",
-      email: "ltran@mortenson.com",
-      confidence: "High",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(7),
-  },
-  {
-    id: "p-012",
-    permitNumber: "BLD-2026-040998",
-    address: "444 N Michigan Ave",
-    city: "Chicago",
-    state: "IL",
-    zip: "60611",
-    latitude: 41.8912,
-    longitude: -87.6244,
-    filingDate: daysAgo(9),
-    description:
-      "Rooftop solar panel installation and electrical tie-in for 20-story office building. 280kW system with inverters and monitoring.",
-    estimatedValue: 950000,
-    status: "Approved",
-    trades: ["Electrical", "Roofing"],
-    gcContact: {
-      companyName: "Gilbane Building Company",
-      contactName: "Mark Johanssen",
-      phone: "(312) 555-0801",
-      email: "mjohanssen@gilbane.com",
-      confidence: "Medium",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(8),
-  },
-  {
-    id: "p-013",
-    permitNumber: "BLD-2026-040945",
-    address: "151 N Franklin St",
-    city: "Chicago",
-    state: "IL",
-    zip: "60606",
-    latitude: 41.8843,
-    longitude: -87.6355,
-    filingDate: daysAgo(9),
-    description:
-      "New ground-floor retail buildout, 8,500 SF. Complete mechanical, electrical, and plumbing. Storefront glass installation.",
-    estimatedValue: 1100000,
-    status: "Issued",
-    trades: ["HVAC", "Electrical", "Plumbing", "Glass & Glazing"],
-    gcContact: {
-      companyName: "Clune Construction",
-      contactName: "Patrick Doyle",
-      phone: "(312) 555-0867",
-      email: "pdoyle@clune.com",
-      confidence: "High",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(9),
-  },
-  {
-    id: "p-014",
-    permitNumber: "BLD-2026-040889",
-    address: "180 N Stetson Ave",
-    city: "Chicago",
-    state: "IL",
-    zip: "60601",
-    latitude: 41.8857,
-    longitude: -87.6218,
-    filingDate: daysAgo(10),
-    description:
-      "Emergency generator replacement and transfer switch upgrade. 2000kW diesel generator with fuel storage and exhaust system.",
-    estimatedValue: 780000,
-    status: "Issued",
-    trades: ["Electrical"],
-    gcContact: {
-      companyName: "McHugh Construction",
-      contactName: "Steve McHugh",
-      phone: "(312) 555-0923",
-      email: null,
-      confidence: "Medium",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(9),
-  },
-  {
-    id: "p-015",
-    permitNumber: "BLD-2026-040834",
-    address: "353 N Clark St",
-    city: "Chicago",
-    state: "IL",
-    zip: "60654",
-    latitude: 41.8887,
-    longitude: -87.6311,
-    filingDate: daysAgo(11),
-    description:
-      "Full-building fire alarm system replacement. New addressable panels, notification appliances, and duct detectors for 25-story office tower.",
-    estimatedValue: 920000,
-    status: "Approved",
-    trades: ["Fire Suppression", "Electrical"],
-    gcContact: {
-      companyName: "Barton Malow",
-      contactName: "Jennifer Wu",
-      phone: "(312) 555-0989",
-      email: "jwu@bartonmalow.com",
-      confidence: "High",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(10),
-  },
-  {
-    id: "p-016",
-    permitNumber: "BLD-2026-040778",
-    address: "10 S LaSalle St",
-    city: "Chicago",
-    state: "IL",
-    zip: "60603",
-    latitude: 41.8817,
-    longitude: -87.6322,
-    filingDate: daysAgo(12),
-    description:
-      "Lobby renovation and new revolving door installation. Includes structural modifications, new marble flooring, and glass entry vestibule.",
-    estimatedValue: 1350000,
-    status: "Issued",
-    trades: ["Glass & Glazing", "General Construction", "Structural Steel"],
-    gcContact: {
-      companyName: "Related Midwest",
-      contactName: "Daniel Foster",
-      phone: "(312) 555-1045",
-      email: "dfoster@relatedmidwest.com",
-      confidence: "High",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(11),
-  },
-  {
-    id: "p-017",
-    permitNumber: "BLD-2026-040712",
-    address: "600 W Chicago Ave",
-    city: "Chicago",
-    state: "IL",
-    zip: "60654",
-    latitude: 41.8965,
-    longitude: -87.6445,
-    filingDate: daysAgo(12),
-    description:
-      "Warehouse-to-office conversion, 45,000 SF. New HVAC systems, complete electrical distribution, plumbing for restrooms and break rooms, and sprinkler system.",
-    estimatedValue: 6200000,
-    status: "Under Review",
-    trades: ["HVAC", "Electrical", "Plumbing", "Fire Suppression"],
-    gcContact: {
-      companyName: "Clayco",
-      contactName: "Roberto Alvarez",
-      phone: "(312) 555-1102",
-      email: "ralvarez@claycorp.com",
-      confidence: "High",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(12),
-  },
-  {
-    id: "p-018",
-    permitNumber: "BLD-2026-040656",
-    address: "875 N Michigan Ave",
-    city: "Chicago",
-    state: "IL",
-    zip: "60611",
-    latitude: 41.8987,
-    longitude: -87.6239,
-    filingDate: daysAgo(13),
-    description:
-      "Concrete repair and waterproofing for below-grade parking levels. Structural crack injection, membrane application, and sump pump replacement.",
-    estimatedValue: 440000,
-    status: "Issued",
-    trades: ["Concrete", "Plumbing"],
-    gcContact: {
-      companyName: "Wiss Janney Elstner",
-      contactName: null,
-      phone: "(312) 555-1158",
-      email: null,
-      confidence: "Low",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(12),
-  },
-  {
-    id: "p-019",
-    permitNumber: "BLD-2026-040601",
-    address: "321 N Clark St",
-    city: "Chicago",
-    state: "IL",
-    zip: "60654",
-    latitude: 41.8883,
-    longitude: -87.6312,
-    filingDate: daysAgo(13),
-    description:
-      "Data center buildout, 12,000 SF. Precision cooling, redundant electrical systems, raised floor, and fire suppression (clean agent).",
-    estimatedValue: 4800000,
-    status: "Issued",
-    trades: ["HVAC", "Electrical", "Fire Suppression"],
-    gcContact: {
-      companyName: "Holder Construction",
-      contactName: "Chris Nakamura",
-      phone: "(312) 555-1214",
-      email: "cnakamura@holderconstruction.com",
-      confidence: "High",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(13),
-  },
-  {
-    id: "p-020",
-    permitNumber: "BLD-2026-040545",
-    address: "111 S Michigan Ave",
-    city: "Chicago",
-    state: "IL",
-    zip: "60603",
-    latitude: 41.8801,
-    longitude: -87.6245,
-    filingDate: daysAgo(14),
-    description:
-      "Historic window replacement program, 450 windows. Custom-fabricated insulated glass units matching original profiles.",
-    estimatedValue: 1900000,
-    status: "Approved",
-    trades: ["Glass & Glazing"],
-    gcContact: {
-      companyName: "Berglund Construction",
-      contactName: "Anna Lindqvist",
-      phone: "(312) 555-1270",
-      email: "alindqvist@berglund.com",
-      confidence: "Medium",
-    },
-    source: "data.cityofchicago.org",
-    sourceUpdatedAt: daysAgo(13),
-  },
-];
-
-const AUSTIN_PERMITS: Permit[] = [
-  {
-    id: "a-001",
-    permitNumber: "BP-2026-078342",
-    address: "301 Congress Ave",
-    city: "Austin",
-    state: "TX",
-    zip: "78701",
-    latitude: 30.2654,
-    longitude: -97.7435,
-    filingDate: daysAgo(1),
-    description:
-      "Full HVAC replacement for 12-story downtown office building. New VRF system, dedicated outdoor air units, and energy management controls.",
-    estimatedValue: 3100000,
-    status: "Issued",
-    trades: ["HVAC"],
-    gcContact: {
-      companyName: "Hensel Phelps",
-      contactName: "Carlos Ramirez",
-      phone: "(512) 555-0201",
-      email: "cramirez@henselphelps.com",
-      confidence: "High",
-    },
-    source: "data.austintexas.gov",
-    sourceUpdatedAt: daysAgo(1),
-  },
-  {
-    id: "a-002",
-    permitNumber: "BP-2026-078298",
-    address: "500 W 2nd St",
-    city: "Austin",
-    state: "TX",
-    zip: "78701",
-    latitude: 30.2656,
-    longitude: -97.7489,
-    filingDate: daysAgo(2),
-    description:
-      "New 6-story mixed-use development electrical rough-in. Complete power distribution, lighting, fire alarm, and low-voltage systems.",
-    estimatedValue: 2400000,
-    status: "Under Review",
-    trades: ["Electrical", "Fire Suppression"],
-    gcContact: {
-      companyName: "DPR Construction",
-      contactName: "Megan Ellis",
-      phone: "(512) 555-0245",
-      email: "mellis@dpr.com",
-      confidence: "High",
-    },
-    source: "data.austintexas.gov",
-    sourceUpdatedAt: daysAgo(1),
-  },
-  {
-    id: "a-003",
-    permitNumber: "BP-2026-078256",
-    address: "1100 S Lamar Blvd",
-    city: "Austin",
-    state: "TX",
-    zip: "78704",
-    latitude: 30.2534,
-    longitude: -97.7586,
-    filingDate: daysAgo(3),
-    description:
-      "Rooftop deck addition with structural steel framing on commercial retail building. Includes new waterproofing membrane and drainage.",
-    estimatedValue: 720000,
-    status: "Issued",
-    trades: ["Structural Steel", "Roofing"],
-    gcContact: {
-      companyName: "Harvey Builders",
-      contactName: "Jake Thompson",
-      phone: "(512) 555-0312",
-      email: "jthompson@harveybuilders.com",
-      confidence: "High",
-    },
-    source: "data.austintexas.gov",
-    sourceUpdatedAt: daysAgo(2),
-  },
-  {
-    id: "a-004",
-    permitNumber: "BP-2026-078201",
-    address: "3500 S IH 35",
-    city: "Austin",
-    state: "TX",
-    zip: "78741",
-    latitude: 30.2298,
-    longitude: -97.7286,
-    filingDate: daysAgo(4),
-    description:
-      "Warehouse buildout for brewery taproom. Plumbing for brewing equipment, grease interceptor, new restrooms, and glass storefront.",
-    estimatedValue: 580000,
-    status: "Issued",
-    trades: ["Plumbing", "Glass & Glazing"],
-    gcContact: {
-      companyName: "Bartlett Cocke General Contractors",
-      contactName: null,
-      phone: "(512) 555-0378",
-      email: null,
-      confidence: "Medium",
-    },
-    source: "data.austintexas.gov",
-    sourceUpdatedAt: daysAgo(3),
-  },
-  {
-    id: "a-005",
-    permitNumber: "BP-2026-078167",
-    address: "6500 N Lamar Blvd",
-    city: "Austin",
-    state: "TX",
-    zip: "78752",
-    latitude: 30.3279,
-    longitude: -97.7173,
-    filingDate: daysAgo(5),
-    description:
-      "Full interior demolition of former retail space, 18,000 SF. Hazmat abatement, structural demo, and site prep for new tenant.",
-    estimatedValue: 340000,
-    status: "Approved",
-    trades: ["Demolition", "General Construction"],
-    gcContact: {
-      companyName: "SpawGlass Construction",
-      contactName: "Tony Vasquez",
-      phone: "(512) 555-0434",
-      email: "tvasquez@spawglass.com",
-      confidence: "High",
-    },
-    source: "data.austintexas.gov",
-    sourceUpdatedAt: daysAgo(4),
-  },
-  {
-    id: "a-006",
-    permitNumber: "BP-2026-078123",
-    address: "200 E 6th St",
-    city: "Austin",
-    state: "TX",
-    zip: "78701",
-    latitude: 30.2677,
-    longitude: -97.7407,
-    filingDate: daysAgo(6),
-    description:
-      "Fire suppression upgrade for historic entertainment venue. New wet sprinkler system, standpipe, and fire pump with emergency generator.",
-    estimatedValue: 890000,
-    status: "Issued",
-    trades: ["Fire Suppression", "Electrical"],
-    gcContact: {
-      companyName: "Rogers-O'Brien Construction",
-      contactName: "Brianna Cole",
-      phone: "(512) 555-0491",
-      email: "bcole@r-o.com",
-      confidence: "High",
-    },
-    source: "data.austintexas.gov",
-    sourceUpdatedAt: daysAgo(5),
-  },
-  {
-    id: "a-007",
-    permitNumber: "BP-2026-078089",
-    address: "9600 N MoPac Expy",
-    city: "Austin",
-    state: "TX",
-    zip: "78759",
-    latitude: 30.3912,
-    longitude: -97.7379,
-    filingDate: daysAgo(7),
-    description:
-      "Concrete foundation and slab work for new 3-story medical office building. Post-tensioned slab, grade beams, and retaining walls.",
-    estimatedValue: 1950000,
-    status: "Under Review",
-    trades: ["Concrete"],
-    gcContact: {
-      companyName: "Flintco",
-      contactName: "Derek Nash",
-      phone: "(512) 555-0548",
-      email: "dnash@flintco.com",
-      confidence: "High",
-    },
-    source: "data.austintexas.gov",
-    sourceUpdatedAt: daysAgo(6),
-  },
-  {
-    id: "a-008",
-    permitNumber: "BP-2026-078045",
-    address: "1200 W 6th St",
-    city: "Austin",
-    state: "TX",
-    zip: "78703",
-    latitude: 30.2715,
-    longitude: -97.7563,
-    filingDate: daysAgo(9),
-    description:
-      "Office-to-residential conversion, 32 units. Complete plumbing for kitchens and baths, HVAC ductwork, and electrical panel upgrades.",
-    estimatedValue: 4200000,
-    status: "Issued",
-    trades: ["Plumbing", "HVAC", "Electrical"],
-    gcContact: {
-      companyName: "Cadence McShane Construction",
-      contactName: "Lauren Nguyen",
-      phone: "(512) 555-0605",
-      email: "lnguyen@cadencemcshane.com",
-      confidence: "High",
-    },
-    source: "data.austintexas.gov",
-    sourceUpdatedAt: daysAgo(8),
-  },
-];
-
-const SF_PERMITS: Permit[] = [
-  {
-    id: "sf-001",
-    permitNumber: "PA-2026-052341",
-    address: "555 California St",
-    city: "San Francisco",
-    state: "CA",
-    zip: "94104",
-    latitude: 37.7922,
-    longitude: -122.4034,
-    filingDate: daysAgo(1),
-    description:
-      "Seismic retrofit and structural steel reinforcement for 52-story office tower. New moment frames, base isolation upgrades, and concrete shear wall strengthening.",
-    estimatedValue: 12500000,
-    status: "Under Review",
-    trades: ["Structural Steel", "Concrete"],
-    gcContact: {
-      companyName: "Webcor Builders",
-      contactName: "Kevin Tanaka",
-      phone: "(415) 555-0167",
-      email: "ktanaka@webcor.com",
-      confidence: "High",
-    },
-    source: "data.sfgov.org",
-    sourceUpdatedAt: daysAgo(1),
-  },
-  {
-    id: "sf-002",
-    permitNumber: "PA-2026-052298",
-    address: "1 Ferry Building",
-    city: "San Francisco",
-    state: "CA",
-    zip: "94111",
-    latitude: 37.7956,
-    longitude: -122.3935,
-    filingDate: daysAgo(2),
-    description:
-      "Full plumbing renovation for historic market hall. New domestic water service, grease interceptors, and floor drain systems for 28 food vendor stalls.",
-    estimatedValue: 1850000,
-    status: "Issued",
-    trades: ["Plumbing"],
-    gcContact: {
-      companyName: "Plant Construction Company",
-      contactName: "Maria Santos",
-      phone: "(415) 555-0234",
-      email: "msantos@plantconstruction.com",
-      confidence: "High",
-    },
-    source: "data.sfgov.org",
-    sourceUpdatedAt: daysAgo(1),
-  },
-  {
-    id: "sf-003",
-    permitNumber: "PA-2026-052245",
-    address: "201 3rd St",
-    city: "San Francisco",
-    state: "CA",
-    zip: "94103",
-    latitude: 37.7854,
-    longitude: -122.4006,
-    filingDate: daysAgo(3),
-    description:
-      "HVAC system modernization for museum building. Energy-efficient chiller plant, humidity control for gallery spaces, and new BAS integration.",
-    estimatedValue: 4300000,
-    status: "Approved",
-    trades: ["HVAC"],
-    gcContact: {
-      companyName: "Swinerton Builders",
-      contactName: "Andrew Liu",
-      phone: "(415) 555-0301",
-      email: "aliu@swinerton.com",
-      confidence: "High",
-    },
-    source: "data.sfgov.org",
-    sourceUpdatedAt: daysAgo(2),
-  },
-  {
-    id: "sf-004",
-    permitNumber: "PA-2026-052189",
-    address: "50 Fremont St",
-    city: "San Francisco",
-    state: "CA",
-    zip: "94105",
-    latitude: 37.7907,
-    longitude: -122.3972,
-    filingDate: daysAgo(4),
-    description:
-      "Electrical service upgrade for tech office floors 18-22. New switchgear, UPS systems, and generator for data room backup power.",
-    estimatedValue: 2200000,
-    status: "Issued",
-    trades: ["Electrical"],
-    gcContact: {
-      companyName: "XL Construction",
-      contactName: "Priya Sharma",
-      phone: "(415) 555-0367",
-      email: "psharma@xlconstruction.com",
-      confidence: "High",
-    },
-    source: "data.sfgov.org",
-    sourceUpdatedAt: daysAgo(3),
-  },
-  {
-    id: "sf-005",
-    permitNumber: "PA-2026-052134",
-    address: "2000 Mission St",
-    city: "San Francisco",
-    state: "CA",
-    zip: "94110",
-    latitude: 37.7635,
-    longitude: -122.4194,
-    filingDate: daysAgo(6),
-    description:
-      "Roof replacement on 4-story mixed-use building. Cool roof membrane, new insulation to Title 24 standards, and skylight installation.",
-    estimatedValue: 620000,
-    status: "Issued",
-    trades: ["Roofing", "Glass & Glazing"],
-    gcContact: {
-      companyName: "Nibbi Brothers General Contractors",
-      contactName: null,
-      phone: "(415) 555-0423",
-      email: null,
-      confidence: "Medium",
-    },
-    source: "data.sfgov.org",
-    sourceUpdatedAt: daysAgo(5),
-  },
-  {
-    id: "sf-006",
-    permitNumber: "PA-2026-052078",
-    address: "100 Van Ness Ave",
-    city: "San Francisco",
-    state: "CA",
-    zip: "94102",
-    latitude: 37.7754,
-    longitude: -122.4193,
-    filingDate: daysAgo(8),
-    description:
-      "Complete fire suppression system installation for office-to-residential conversion. NFPA 13R sprinkler system, fire alarm, and smoke control.",
-    estimatedValue: 1400000,
-    status: "Issued",
-    trades: ["Fire Suppression", "Electrical"],
-    gcContact: {
-      companyName: "Pankow Builders",
-      contactName: "Greg Morrison",
-      phone: "(415) 555-0489",
-      email: "gmorrison@pankow.com",
-      confidence: "High",
-    },
-    source: "data.sfgov.org",
-    sourceUpdatedAt: daysAgo(7),
-  },
-  {
-    id: "sf-007",
-    permitNumber: "PA-2026-052023",
-    address: "345 Spear St",
-    city: "San Francisco",
-    state: "CA",
-    zip: "94105",
-    latitude: 37.7893,
-    longitude: -122.3905,
-    filingDate: daysAgo(10),
-    description:
-      "Glass curtain wall repair and replacement on waterfront commercial building. Storefront system with blast-resistant glazing units.",
-    estimatedValue: 3100000,
-    status: "Under Review",
-    trades: ["Glass & Glazing"],
-    gcContact: {
-      companyName: "Hathaway Dinwiddie",
-      contactName: "Susan Park",
-      phone: "(415) 555-0545",
-      email: "spark@hdcco.com",
-      confidence: "High",
-    },
-    source: "data.sfgov.org",
-    sourceUpdatedAt: daysAgo(9),
-  },
-];
-
-const SEATTLE_PERMITS: Permit[] = [
-  {
-    id: "se-001",
-    permitNumber: "6803421-CN",
-    address: "400 Broad St",
-    city: "Seattle",
-    state: "WA",
-    zip: "98109",
-    latitude: 47.6205,
-    longitude: -122.3493,
-    filingDate: daysAgo(1),
-    description:
-      "Complete HVAC system replacement for performing arts center. New air handling units, chilled water plant, and building automation for climate-controlled performance halls.",
-    estimatedValue: 5600000,
-    status: "Issued",
-    trades: ["HVAC"],
-    gcContact: {
-      companyName: "Skanska USA",
-      contactName: "Eric Johansson",
-      phone: "(206) 555-0189",
-      email: "ejohansson@skanska.com",
-      confidence: "High",
-    },
-    source: "data.seattle.gov",
-    sourceUpdatedAt: daysAgo(1),
-  },
-  {
-    id: "se-002",
-    permitNumber: "6803387-CN",
-    address: "1918 8th Ave",
-    city: "Seattle",
-    state: "WA",
-    zip: "98101",
-    latitude: 47.6149,
-    longitude: -122.3368,
-    filingDate: daysAgo(2),
-    description:
-      "Electrical rough-in for new 40-story residential tower. Complete power distribution, emergency systems, and EV charging infrastructure for 350 units.",
-    estimatedValue: 4800000,
-    status: "Under Review",
-    trades: ["Electrical"],
-    gcContact: {
-      companyName: "GLY Construction",
-      contactName: "Dana Whitfield",
-      phone: "(206) 555-0256",
-      email: "dwhitfield@gly.com",
-      confidence: "High",
-    },
-    source: "data.seattle.gov",
-    sourceUpdatedAt: daysAgo(1),
-  },
-  {
-    id: "se-003",
-    permitNumber: "6803312-CN",
-    address: "2201 Westlake Ave",
-    city: "Seattle",
-    state: "WA",
-    zip: "98121",
-    latitude: 47.6185,
-    longitude: -122.3388,
-    filingDate: daysAgo(3),
-    description:
-      "Plumbing and fire suppression for biotech lab buildout. Specialized waste neutralization, lab gas systems, emergency shower/eyewash stations.",
-    estimatedValue: 2900000,
-    status: "Issued",
-    trades: ["Plumbing", "Fire Suppression"],
-    gcContact: {
-      companyName: "Lease Crutcher Lewis",
-      contactName: "Amanda Reeves",
-      phone: "(206) 555-0312",
-      email: "areeves@lewisbuilds.com",
-      confidence: "High",
-    },
-    source: "data.seattle.gov",
-    sourceUpdatedAt: daysAgo(2),
-  },
-  {
-    id: "se-004",
-    permitNumber: "6803267-CN",
-    address: "705 Pike St",
-    city: "Seattle",
-    state: "WA",
-    zip: "98101",
-    latitude: 47.6127,
-    longitude: -122.3344,
-    filingDate: daysAgo(5),
-    description:
-      "Structural steel and concrete work for new retail podium. Moment frame connections, composite deck, and foundation underpinning for adjacent structures.",
-    estimatedValue: 7200000,
-    status: "Approved",
-    trades: ["Structural Steel", "Concrete"],
-    gcContact: {
-      companyName: "Mortenson Construction",
-      contactName: "Bryan Koehler",
-      phone: "(206) 555-0378",
-      email: "bkoehler@mortenson.com",
-      confidence: "High",
-    },
-    source: "data.seattle.gov",
-    sourceUpdatedAt: daysAgo(4),
-  },
-  {
-    id: "se-005",
-    permitNumber: "6803198-CN",
-    address: "333 Elliott Ave W",
-    city: "Seattle",
-    state: "WA",
-    zip: "98119",
-    latitude: 47.6178,
-    longitude: -122.3619,
-    filingDate: daysAgo(6),
-    description:
-      "Green roof installation and waterproofing on 6-story commercial building. Vegetated assembly, root barrier, and new drainage system.",
-    estimatedValue: 980000,
-    status: "Issued",
-    trades: ["Roofing"],
-    gcContact: {
-      companyName: "Sellen Construction",
-      contactName: "Nicole Chang",
-      phone: "(206) 555-0434",
-      email: "nchang@sellen.com",
-      confidence: "High",
-    },
-    source: "data.seattle.gov",
-    sourceUpdatedAt: daysAgo(5),
-  },
-  {
-    id: "se-006",
-    permitNumber: "6803145-CN",
-    address: "1000 1st Ave S",
-    city: "Seattle",
-    state: "WA",
-    zip: "98134",
-    latitude: 47.5937,
-    longitude: -122.3338,
-    filingDate: daysAgo(8),
-    description:
-      "Industrial warehouse demolition and site clearing, 60,000 SF. Includes hazmat survey, abatement, and structural demolition.",
-    estimatedValue: 480000,
-    status: "Issued",
-    trades: ["Demolition"],
-    gcContact: {
-      companyName: "MacDonald-Miller",
-      contactName: null,
-      phone: "(206) 555-0501",
-      email: null,
-      confidence: "Low",
-    },
-    source: "data.seattle.gov",
-    sourceUpdatedAt: daysAgo(7),
-  },
-  {
-    id: "se-007",
-    permitNumber: "6803089-CN",
-    address: "600 Pine St",
-    city: "Seattle",
-    state: "WA",
-    zip: "98101",
-    latitude: 47.6133,
-    longitude: -122.3356,
-    filingDate: daysAgo(10),
-    description:
-      "Curtain wall glass panel replacement for 14-story department store. High-performance IGU units with solar coating and bird-safe fritting.",
-    estimatedValue: 2650000,
-    status: "Under Review",
-    trades: ["Glass & Glazing"],
-    gcContact: {
-      companyName: "BNBuilders",
-      contactName: "Ryan Cho",
-      phone: "(206) 555-0567",
-      email: "rcho@bnbuilders.com",
-      confidence: "High",
-    },
-    source: "data.seattle.gov",
-    sourceUpdatedAt: daysAgo(9),
-  },
-];
-
-const NYC_PERMITS: Permit[] = [
-  {
-    id: "ny-001",
-    permitNumber: "NB-2026-301456",
-    address: "1 World Trade Center",
-    city: "New York",
-    state: "NY",
-    zip: "10007",
-    latitude: 40.7127,
-    longitude: -74.0134,
-    filingDate: daysAgo(1),
-    description:
-      "Mechanical system upgrade for observation deck levels. New dedicated HVAC units, exhaust systems, and building management controls for public spaces.",
-    estimatedValue: 4200000,
-    status: "Issued",
-    trades: ["HVAC"],
-    gcContact: {
-      companyName: "Tishman Construction",
-      contactName: "Frank DeLuca",
-      phone: "(212) 555-0178",
-      email: "fdeluca@tishman.com",
-      confidence: "High",
-    },
-    source: "data.cityofnewyork.us",
-    sourceUpdatedAt: daysAgo(1),
-  },
-  {
-    id: "ny-002",
-    permitNumber: "NB-2026-301398",
-    address: "350 5th Ave",
-    city: "New York",
-    state: "NY",
-    zip: "10118",
-    latitude: 40.7484,
-    longitude: -73.9857,
-    filingDate: daysAgo(2),
-    description:
-      "Electrical infrastructure upgrade for landmark office building. New 13.2kV switchgear, busway risers, and tenant metering for floors 60-80.",
-    estimatedValue: 6800000,
-    status: "Under Review",
-    trades: ["Electrical"],
-    gcContact: {
-      companyName: "Structure Tone",
-      contactName: "James Corrigan",
-      phone: "(212) 555-0245",
-      email: "jcorrigan@structuretone.com",
-      confidence: "High",
-    },
-    source: "data.cityofnewyork.us",
-    sourceUpdatedAt: daysAgo(1),
-  },
-  {
-    id: "ny-003",
-    permitNumber: "NB-2026-301334",
-    address: "11 Times Square",
-    city: "New York",
-    state: "NY",
-    zip: "10036",
-    latitude: 40.7565,
-    longitude: -73.9903,
-    filingDate: daysAgo(3),
-    description:
-      "Complete plumbing stack replacement for 40-story commercial tower. New copper risers, PRV stations, and bathroom fixture upgrades for 8 tenant floors.",
-    estimatedValue: 3500000,
-    status: "Issued",
-    trades: ["Plumbing"],
-    gcContact: {
-      companyName: "Lendlease",
-      contactName: "Patricia Byrne",
-      phone: "(212) 555-0312",
-      email: "pbyrne@lendlease.com",
-      confidence: "High",
-    },
-    source: "data.cityofnewyork.us",
-    sourceUpdatedAt: daysAgo(2),
-  },
-  {
-    id: "ny-004",
-    permitNumber: "NB-2026-301278",
-    address: "200 Park Ave",
-    city: "New York",
-    state: "NY",
-    zip: "10166",
-    latitude: 40.7533,
-    longitude: -73.9765,
-    filingDate: daysAgo(4),
-    description:
-      "Structural steel reinforcement for transit hub connection. New transfer beams, column wraps, and connection to below-grade concourse.",
-    estimatedValue: 9400000,
-    status: "Approved",
-    trades: ["Structural Steel", "Concrete"],
-    gcContact: {
-      companyName: "Turner Construction",
-      contactName: "Michael Reilly",
-      phone: "(212) 555-0378",
-      email: "mreilly@tcco.com",
-      confidence: "High",
-    },
-    source: "data.cityofnewyork.us",
-    sourceUpdatedAt: daysAgo(3),
-  },
-  {
-    id: "ny-005",
-    permitNumber: "NB-2026-301223",
-    address: "601 W 26th St",
-    city: "New York",
-    state: "NY",
-    zip: "10001",
-    latitude: 40.7511,
-    longitude: -74.0035,
-    filingDate: daysAgo(5),
-    description:
-      "Fire sprinkler system retrofit for historic warehouse conversion. New wet and dry sprinkler zones, fire pump, and Siamese connections.",
-    estimatedValue: 1800000,
-    status: "Issued",
-    trades: ["Fire Suppression"],
-    gcContact: {
-      companyName: "Gilbane Building Company",
-      contactName: "Theresa Kowalski",
-      phone: "(212) 555-0434",
-      email: "tkowalski@gilbane.com",
-      confidence: "High",
-    },
-    source: "data.cityofnewyork.us",
-    sourceUpdatedAt: daysAgo(4),
-  },
-  {
-    id: "ny-006",
-    permitNumber: "NB-2026-301167",
-    address: "30 Hudson Yards",
-    city: "New York",
-    state: "NY",
-    zip: "10001",
-    latitude: 40.7538,
-    longitude: -74.0007,
-    filingDate: daysAgo(6),
-    description:
-      "Curtain wall inspection and panel replacement on 73-story observation tower. Unitized curtain wall panels with triple-pane IGUs.",
-    estimatedValue: 5200000,
-    status: "Issued",
-    trades: ["Glass & Glazing"],
-    gcContact: {
-      companyName: "Related Companies",
-      contactName: "David Schwartz",
-      phone: "(212) 555-0501",
-      email: "dschwartz@related.com",
-      confidence: "High",
-    },
-    source: "data.cityofnewyork.us",
-    sourceUpdatedAt: daysAgo(5),
-  },
-  {
-    id: "ny-007",
-    permitNumber: "NB-2026-301112",
-    address: "475 10th Ave",
-    city: "New York",
-    state: "NY",
-    zip: "10018",
-    latitude: 40.7572,
-    longitude: -73.9979,
-    filingDate: daysAgo(7),
-    description:
-      "Complete roof replacement for commercial office building. Built-up roofing with tapered insulation, new drains, and parapet coping.",
-    estimatedValue: 1100000,
-    status: "Issued",
-    trades: ["Roofing"],
-    gcContact: {
-      companyName: "Hunter Roberts Construction",
-      contactName: "Anthony Morales",
-      phone: "(212) 555-0567",
-      email: "amorales@hunterroberts.com",
-      confidence: "High",
-    },
-    source: "data.cityofnewyork.us",
-    sourceUpdatedAt: daysAgo(6),
-  },
-  {
-    id: "ny-008",
-    permitNumber: "NB-2026-301056",
-    address: "1 Manhattan West",
-    city: "New York",
-    state: "NY",
-    zip: "10001",
-    latitude: 40.7526,
-    longitude: -73.9958,
-    filingDate: daysAgo(9),
-    description:
-      "Interior demolition of 3 tenant floors totaling 90,000 SF. Includes asbestos abatement, partition removal, and ceiling system demo.",
-    estimatedValue: 720000,
-    status: "Approved",
-    trades: ["Demolition", "General Construction"],
-    gcContact: {
-      companyName: "Plaza Construction",
-      contactName: "Linda Forsythe",
-      phone: "(212) 555-0623",
-      email: "lforsythe@plazaconstruction.com",
-      confidence: "High",
-    },
-    source: "data.cityofnewyork.us",
-    sourceUpdatedAt: daysAgo(8),
-  },
-  {
-    id: "ny-009",
-    permitNumber: "NB-2026-301001",
-    address: "277 Park Ave",
-    city: "New York",
-    state: "NY",
-    zip: "10172",
-    latitude: 40.7559,
-    longitude: -73.9726,
-    filingDate: daysAgo(11),
-    description:
-      "Concrete restoration and facade repair for 50-story office tower. Spall repair, waterproof coating, and new expansion joints.",
-    estimatedValue: 2300000,
-    status: "Under Review",
-    trades: ["Concrete"],
-    gcContact: {
-      companyName: "Sciame Construction",
-      contactName: "Vincent Palermo",
-      phone: "(212) 555-0689",
-      email: "vpalermo@sciame.com",
-      confidence: "High",
-    },
-    source: "data.cityofnewyork.us",
-    sourceUpdatedAt: daysAgo(10),
-  },
-];
-
-const PHILLY_PERMITS: Permit[] = [
-  {
-    id: "p-phl-001",
-    permitNumber: "PHL-2026-10234",
-    address: "1500 Market St",
-    city: "Philadelphia",
-    state: "PA",
-    zip: "19102",
-    latitude: 39.9526,
-    longitude: -75.1652,
-    filingDate: daysAgo(2),
-    description: "Complete HVAC retrofit for 40-story commercial office tower. New rooftop units and building automation system.",
-    estimatedValue: 3200000,
-    status: "Issued",
-    trades: ["HVAC"],
-    gcContact: { companyName: "Tutor Perini Corporation", contactName: "James Vitale", phone: "(215) 555-0198", email: "jvitale@tutorperini.com", confidence: "High" },
-    source: "phl.carto.com",
-    sourceUpdatedAt: daysAgo(1),
-  },
-  {
-    id: "p-phl-002",
-    permitNumber: "PHL-2026-10567",
-    address: "2400 Chestnut St",
-    city: "Philadelphia",
-    state: "PA",
-    zip: "19103",
-    latitude: 39.9543,
-    longitude: -75.1782,
-    filingDate: daysAgo(4),
-    description: "New fire suppression system installation for mixed-use commercial building. Includes standpipe and sprinkler heads.",
-    estimatedValue: 890000,
-    status: "Under Review",
-    trades: ["Fire Suppression"],
-    gcContact: { companyName: "LF Driscoll Co", contactName: null, phone: null, email: null, confidence: "Medium" },
-    source: "phl.carto.com",
-    sourceUpdatedAt: daysAgo(3),
-  },
-  {
-    id: "p-phl-003",
-    permitNumber: "PHL-2026-10789",
-    address: "3601 Market St",
-    city: "Philadelphia",
-    state: "PA",
-    zip: "19104",
-    latitude: 39.9566,
-    longitude: -75.1946,
-    filingDate: daysAgo(6),
-    description: "Tenant buildout for new laboratory space in University City. Includes electrical, plumbing, and HVAC modifications.",
-    estimatedValue: 1750000,
-    status: "Approved",
-    trades: ["General Construction", "Electrical", "Plumbing"],
-    gcContact: { companyName: "Intech Construction", contactName: "Robert Chen", phone: "(215) 555-0234", email: "rchen@intechconstruction.com", confidence: "High" },
-    source: "phl.carto.com",
-    sourceUpdatedAt: daysAgo(5),
-  },
-  {
-    id: "p-phl-004",
-    permitNumber: "PHL-2026-10891",
-    address: "1234 Walnut St",
-    city: "Philadelphia",
-    state: "PA",
-    zip: "19107",
-    latitude: 39.9489,
-    longitude: -75.1618,
-    filingDate: daysAgo(8),
-    description: "Structural steel reinforcement and roofing replacement for commercial retail building. New TPO membrane system.",
-    estimatedValue: 620000,
-    status: "Issued",
-    trades: ["Structural Steel", "Roofing"],
-    gcContact: { companyName: "IMC Construction", contactName: null, phone: null, email: null, confidence: "Medium" },
-    source: "phl.carto.com",
-    sourceUpdatedAt: daysAgo(7),
-  },
-  {
-    id: "p-phl-005",
-    permitNumber: "PHL-2026-11023",
-    address: "900 N Broad St",
-    city: "Philadelphia",
-    state: "PA",
-    zip: "19123",
-    latitude: 39.9682,
-    longitude: -75.1596,
-    filingDate: daysAgo(10),
-    description: "Glass curtain wall installation for new 12-story mixed-use development in North Broad corridor.",
-    estimatedValue: 4100000,
-    status: "Under Review",
-    trades: ["Glass & Glazing"],
-    gcContact: { companyName: "Hunter Roberts Construction", contactName: "Maria Santiago", phone: "(215) 555-0456", email: "msantiago@hunterroberts.com", confidence: "High" },
-    source: "phl.carto.com",
-    sourceUpdatedAt: daysAgo(9),
-  },
-];
-
-const BOSTON_PERMITS: Permit[] = [
-  {
-    id: "p-bos-001",
-    permitNumber: "A2026-45012",
-    address: "1 Federal St",
-    city: "Boston",
-    state: "MA",
-    zip: "02110",
-    latitude: 42.3554,
-    longitude: -71.0567,
-    filingDate: daysAgo(1),
-    description: "Complete electrical system upgrade for 37-story commercial office tower. New switchgear, panels, and emergency generator.",
-    estimatedValue: 2100000,
-    status: "Issued",
-    trades: ["Electrical"],
-    gcContact: { companyName: "Suffolk Construction", contactName: "John Fish", phone: "(617) 555-0198", email: "jfish@suffolk.com", confidence: "High" },
-    source: "data.boston.gov",
-    sourceUpdatedAt: daysAgo(0),
-  },
-  {
-    id: "p-bos-002",
-    permitNumber: "A2026-45234",
-    address: "100 Northern Ave",
-    city: "Boston",
-    state: "MA",
-    zip: "02210",
-    latitude: 42.3476,
-    longitude: -71.0386,
-    filingDate: daysAgo(3),
-    description: "New plumbing and HVAC installation for Seaport District restaurant buildout. Grease trap, hood ventilation, and refrigeration.",
-    estimatedValue: 450000,
-    status: "Under Review",
-    trades: ["Plumbing", "HVAC"],
-    gcContact: { companyName: "Lee Kennedy Co", contactName: null, phone: null, email: null, confidence: "Medium" },
-    source: "data.boston.gov",
-    sourceUpdatedAt: daysAgo(2),
-  },
-  {
-    id: "p-bos-003",
-    permitNumber: "A2026-45456",
-    address: "75 State St",
-    city: "Boston",
-    state: "MA",
-    zip: "02109",
-    latitude: 42.3589,
-    longitude: -71.0531,
-    filingDate: daysAgo(5),
-    description: "Concrete foundation and structural work for new 8-story biotech lab building. Deep foundation piles and grade beams.",
-    estimatedValue: 5600000,
-    status: "Approved",
-    trades: ["Concrete", "Structural Steel"],
-    gcContact: { companyName: "Skanska USA Building", contactName: "Erik Lund", phone: "(617) 555-0312", email: "elund@skanska.com", confidence: "High" },
-    source: "data.boston.gov",
-    sourceUpdatedAt: daysAgo(4),
-  },
-  {
-    id: "p-bos-004",
-    permitNumber: "A2026-45678",
-    address: "250 Summer St",
-    city: "Boston",
-    state: "MA",
-    zip: "02210",
-    latitude: 42.3497,
-    longitude: -71.0527,
-    filingDate: daysAgo(7),
-    description: "Fire sprinkler system upgrade for 15-story commercial building. NFPA-compliant wet system with new risers.",
-    estimatedValue: 780000,
-    status: "Issued",
-    trades: ["Fire Suppression"],
-    gcContact: { companyName: "Shawmut Design & Construction", contactName: null, phone: null, email: null, confidence: "Medium" },
-    source: "data.boston.gov",
-    sourceUpdatedAt: daysAgo(6),
-  },
-  {
-    id: "p-bos-005",
-    permitNumber: "A2026-45890",
-    address: "501 Boylston St",
-    city: "Boston",
-    state: "MA",
-    zip: "02116",
-    latitude: 42.3518,
-    longitude: -71.0732,
-    filingDate: daysAgo(9),
-    description: "Roofing replacement and facade restoration for Back Bay commercial property. Modified bitumen and copper flashing.",
-    estimatedValue: 920000,
-    status: "Completed",
-    trades: ["Roofing"],
-    gcContact: { companyName: "Consigli Construction", contactName: "Anthony Consigli", phone: "(617) 555-0567", email: "aconsigli@consigli.com", confidence: "High" },
-    source: "data.boston.gov",
-    sourceUpdatedAt: daysAgo(8),
-  },
-];
-
-const LA_PERMITS: Permit[] = [
-  {
-    id: "p-la-001",
-    permitNumber: "LA-2026-00234",
-    address: "10250 Constellation Blvd",
-    city: "Los Angeles",
-    state: "CA",
-    zip: "90067",
-    latitude: 34.0583,
-    longitude: -118.4148,
-    filingDate: daysAgo(1),
-    description: "Complete HVAC system replacement for Century City commercial tower. New chiller plant and rooftop units.",
-    estimatedValue: 4500000,
-    status: "Issued",
-    trades: ["HVAC"],
-    gcContact: { companyName: "AECOM Hunt", contactName: "David Park", phone: "(310) 555-0142", email: "dpark@aecom.com", confidence: "High" },
-    source: "data.lacity.org",
-    sourceUpdatedAt: daysAgo(0),
-  },
-  {
-    id: "p-la-002",
-    permitNumber: "LA-2026-00567",
-    address: "900 Wilshire Blvd",
-    city: "Los Angeles",
-    state: "CA",
-    zip: "90017",
-    latitude: 34.0494,
-    longitude: -118.2597,
-    filingDate: daysAgo(3),
-    description: "Tenant improvement for new restaurant with drive-thru. Electrical, plumbing, and interior finish work.",
-    estimatedValue: 680000,
-    status: "Under Review",
-    trades: ["General Construction", "Electrical", "Plumbing"],
-    gcContact: { companyName: "Bernards Construction", contactName: null, phone: null, email: null, confidence: "Medium" },
-    source: "data.lacity.org",
-    sourceUpdatedAt: daysAgo(2),
-  },
-  {
-    id: "p-la-003",
-    permitNumber: "LA-2026-00789",
-    address: "5900 Wilshire Blvd",
-    city: "Los Angeles",
-    state: "CA",
-    zip: "90036",
-    latitude: 34.0629,
-    longitude: -118.3553,
-    filingDate: daysAgo(5),
-    description: "Structural steel erection for new 20-story mixed-use development. Moment frames and braced core.",
-    estimatedValue: 12500000,
-    status: "Approved",
-    trades: ["Structural Steel"],
-    gcContact: { companyName: "Clark Construction Group", contactName: "Rebecca Torres", phone: "(310) 555-0398", email: "rtorres@clarkconstruction.com", confidence: "High" },
-    source: "data.lacity.org",
-    sourceUpdatedAt: daysAgo(4),
-  },
-  {
-    id: "p-la-004",
-    permitNumber: "LA-2026-01012",
-    address: "3100 N Highland Ave",
-    city: "Los Angeles",
-    state: "CA",
-    zip: "90068",
-    latitude: 34.1193,
-    longitude: -118.3387,
-    filingDate: daysAgo(7),
-    description: "Fire sprinkler and alarm system installation for new soundstage complex. Includes pre-action system.",
-    estimatedValue: 1350000,
-    status: "Issued",
-    trades: ["Fire Suppression"],
-    gcContact: { companyName: "PCL Construction", contactName: null, phone: null, email: null, confidence: "Medium" },
-    source: "data.lacity.org",
-    sourceUpdatedAt: daysAgo(6),
-  },
-  {
-    id: "p-la-005",
-    permitNumber: "LA-2026-01234",
-    address: "2049 Century Park East",
-    city: "Los Angeles",
-    state: "CA",
-    zip: "90067",
-    latitude: 34.0601,
-    longitude: -118.4129,
-    filingDate: daysAgo(9),
-    description: "Glass curtain wall replacement for 44-story office tower. New energy-efficient glazing system.",
-    estimatedValue: 8200000,
-    status: "Under Review",
-    trades: ["Glass & Glazing"],
-    gcContact: { companyName: "Webcor Builders", contactName: "Jennifer Liu", phone: "(310) 555-0567", email: "jliu@webcor.com", confidence: "High" },
-    source: "data.lacity.org",
-    sourceUpdatedAt: daysAgo(8),
-  },
-  {
-    id: "p-la-006",
-    permitNumber: "LA-2026-01456",
-    address: "800 S Figueroa St",
-    city: "Los Angeles",
-    state: "CA",
-    zip: "90017",
-    latitude: 34.0442,
-    longitude: -118.2614,
-    filingDate: daysAgo(11),
-    description: "Demolition of existing 3-story commercial building for new mixed-use development.",
-    estimatedValue: 520000,
-    status: "Completed",
-    trades: ["Demolition"],
-    gcContact: { companyName: "Pankow Builders", contactName: "Steve Pankow", phone: "(310) 555-0789", email: "spankow@pankow.com", confidence: "High" },
-    source: "data.lacity.org",
-    sourceUpdatedAt: daysAgo(10),
-  },
-];
-
-const NASHVILLE_PERMITS: Permit[] = [
-  {
-    id: "p-nash-001",
-    permitNumber: "NASH-2026-78901",
-    address: "501 Broadway",
-    city: "Nashville",
-    state: "TN",
-    zip: "37203",
-    latitude: 36.1627,
-    longitude: -86.7764,
-    filingDate: daysAgo(2),
-    description: "Complete HVAC system installation for new 6-story hotel in downtown Nashville. Variable refrigerant flow system with dedicated outdoor air.",
-    estimatedValue: 3100000,
-    status: "Issued",
-    trades: ["HVAC"],
-    gcContact: { companyName: "Brasfield & Gorrie", contactName: "Tyler Gorrie", phone: "(615) 555-0198", email: "tgorrie@brasfieldgorrie.com", confidence: "High" },
-    source: "permits.partner.socrata.com",
-    sourceUpdatedAt: daysAgo(1),
-  },
-  {
-    id: "p-nash-002",
-    permitNumber: "NASH-2026-79012",
-    address: "1000 Church St",
-    city: "Nashville",
-    state: "TN",
-    zip: "37203",
-    latitude: 36.1580,
-    longitude: -86.7858,
-    filingDate: daysAgo(4),
-    description: "Electrical service upgrade and new switchgear for commercial office building renovation. 2000A service.",
-    estimatedValue: 520000,
-    status: "Under Review",
-    trades: ["Electrical"],
-    gcContact: { companyName: "Bell & Associates Construction", contactName: null, phone: null, email: null, confidence: "Medium" },
-    source: "permits.partner.socrata.com",
-    sourceUpdatedAt: daysAgo(3),
-  },
-  {
-    id: "p-nash-003",
-    permitNumber: "NASH-2026-79234",
-    address: "200 4th Ave N",
-    city: "Nashville",
-    state: "TN",
-    zip: "37219",
-    latitude: 36.1654,
-    longitude: -86.7793,
-    filingDate: daysAgo(6),
-    description: "Tenant improvement buildout for new restaurant space in Germantown. Full kitchen plumbing, grease interceptor, and hood ventilation.",
-    estimatedValue: 870000,
-    status: "Approved",
-    trades: ["Plumbing", "General Construction"],
-    gcContact: { companyName: "Turner Construction", contactName: "Mark Wilson", phone: "(615) 555-0312", email: "mwilson@turnerconstruction.com", confidence: "High" },
-    source: "permits.partner.socrata.com",
-    sourceUpdatedAt: daysAgo(5),
-  },
-  {
-    id: "p-nash-004",
-    permitNumber: "NASH-2026-79456",
-    address: "700 Korean Veterans Blvd",
-    city: "Nashville",
-    state: "TN",
-    zip: "37203",
-    latitude: 36.1567,
-    longitude: -86.7751,
-    filingDate: daysAgo(8),
-    description: "Structural steel erection for new mixed-use development near SoBro. 15-story tower with moment frames.",
-    estimatedValue: 8500000,
-    status: "Issued",
-    trades: ["Structural Steel"],
-    gcContact: { companyName: "Skanska USA Building", contactName: null, phone: null, email: null, confidence: "Medium" },
-    source: "permits.partner.socrata.com",
-    sourceUpdatedAt: daysAgo(7),
-  },
-];
-
-const SD_PERMITS: Permit[] = [
-  { id: "p-sd-001", permitNumber: "PDS2026-COM-001234", address: "350 10th Ave", city: "San Diego", state: "CA", zip: "92101", latitude: 32.7157, longitude: -117.1611, filingDate: daysAgo(2), description: "New HVAC rooftop units for 8-story downtown office building. Variable air volume system with energy recovery.", estimatedValue: 1800000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "DPR Construction", contactName: "Jason Cruz", phone: "(619) 555-0198", email: "jcruz@dpr.com", confidence: "High" }, source: "data.sandiegocounty.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-sd-002", permitNumber: "PDS2026-COM-001567", address: "2305 Historic Decatur Rd", city: "San Diego", state: "CA", zip: "92106", latitude: 32.7274, longitude: -117.2115, filingDate: daysAgo(5), description: "Tenant improvement for biotech lab. Electrical, plumbing, and clean room construction.", estimatedValue: 2400000, status: "Under Review", trades: ["Electrical", "Plumbing", "General Construction"], gcContact: { companyName: "Rudolph & Sletten", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.sandiegocounty.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-sd-003", permitNumber: "PDS2026-COM-001890", address: "8910 University Center Ln", city: "San Diego", state: "CA", zip: "92122", latitude: 32.8715, longitude: -117.2128, filingDate: daysAgo(8), description: "Fire sprinkler system upgrade for commercial retail center. New wet-pipe system.", estimatedValue: 650000, status: "Approved", trades: ["Fire Suppression"], gcContact: { companyName: "Level 10 Construction", contactName: "Amy Chen", phone: "(619) 555-0345", email: "achen@level10.com", confidence: "High" }, source: "data.sandiegocounty.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const DENVER_PERMITS: Permit[] = [
-  { id: "p-den-001", permitNumber: "2026-COMMCON-0001234", address: "1700 Lincoln St", city: "Denver", state: "CO", zip: "80203", latitude: 39.7454, longitude: -104.9862, filingDate: daysAgo(1), description: "New building — 12-story mixed-use commercial tower. Structural steel and concrete foundations.", estimatedValue: 15000000, status: "Issued", trades: ["Structural Steel", "Concrete"], gcContact: { companyName: "Hensel Phelps", contactName: "David Martinez", phone: "(303) 555-0198", email: "dmartinez@henselphelps.com", confidence: "High" }, source: "data.denvergov.org", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-den-002", permitNumber: "2026-COMMCON-0001567", address: "3401 Quebec St", city: "Denver", state: "CO", zip: "80207", latitude: 39.7631, longitude: -104.9045, filingDate: daysAgo(4), description: "Alteration/tenant finish — new restaurant buildout with commercial kitchen, hood ventilation.", estimatedValue: 780000, status: "Under Review", trades: ["General Construction", "HVAC", "Plumbing"], gcContact: { companyName: "GE Johnson Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.denvergov.org", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-den-003", permitNumber: "2026-COMMCON-0001890", address: "1601 Wewatta St", city: "Denver", state: "CO", zip: "80202", latitude: 39.7536, longitude: -105.0005, filingDate: daysAgo(7), description: "Roofing replacement for Union Station commercial complex. TPO membrane and copper flashings.", estimatedValue: 1200000, status: "Issued", trades: ["Roofing"], gcContact: { companyName: "Mortenson Construction", contactName: "Lisa Park", phone: "(303) 555-0456", email: "lpark@mortenson.com", confidence: "High" }, source: "data.denvergov.org", sourceUpdatedAt: daysAgo(6) },
-];
-
-const MPLS_PERMITS: Permit[] = [
-  { id: "p-mpls-001", permitNumber: "MPLS-2026-45012", address: "250 Marquette Ave S", city: "Minneapolis", state: "MN", zip: "55401", latitude: 44.9778, longitude: -93.2696, filingDate: daysAgo(2), description: "Electrical switchgear replacement for 30-story IDS Center. New 4000A main service.", estimatedValue: 1600000, status: "Issued", trades: ["Electrical"], gcContact: { companyName: "McGough Construction", contactName: "Steve McGough", phone: "(612) 555-0198", email: "smcgough@mcgough.com", confidence: "High" }, source: "opendata.minneapolismn.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-mpls-002", permitNumber: "MPLS-2026-45234", address: "800 Nicollet Mall", city: "Minneapolis", state: "MN", zip: "55402", latitude: 44.9750, longitude: -93.2717, filingDate: daysAgo(5), description: "Glass curtain wall installation for new 8-story office building in downtown.", estimatedValue: 3200000, status: "Under Review", trades: ["Glass & Glazing"], gcContact: { companyName: "Ryan Companies", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "opendata.minneapolismn.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-mpls-003", permitNumber: "MPLS-2026-45456", address: "401 N 3rd St", city: "Minneapolis", state: "MN", zip: "55401", latitude: 44.9842, longitude: -93.2713, filingDate: daysAgo(8), description: "Demolition of 2-story warehouse for new mixed-use development in North Loop.", estimatedValue: 380000, status: "Approved", trades: ["Demolition"], gcContact: { companyName: "Kraus-Anderson", contactName: "Tom Anderson", phone: "(612) 555-0345", email: "tanderson@krausanderson.com", confidence: "High" }, source: "opendata.minneapolismn.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const DC_PERMITS: Permit[] = [
-  { id: "p-dc-001", permitNumber: "B2026-0012345", address: "1100 15th St NW", city: "Washington", state: "DC", zip: "20005", latitude: 38.9049, longitude: -77.0345, filingDate: daysAgo(1), description: "New building — 10-story commercial office with ground-floor retail. Full mechanical systems.", estimatedValue: 8500000, status: "Issued", trades: ["General Construction", "HVAC", "Electrical"], gcContact: { companyName: "Clark Construction Group", contactName: "James Mitchell", phone: "(202) 555-0198", email: "jmitchell@clarkconstruction.com", confidence: "High" }, source: "opendata.dc.gov", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-dc-002", permitNumber: "B2026-0013456", address: "701 Pennsylvania Ave NW", city: "Washington", state: "DC", zip: "20004", latitude: 38.8941, longitude: -77.0214, filingDate: daysAgo(4), description: "Alteration and repair — fire alarm and sprinkler upgrade for 8-story office building.", estimatedValue: 920000, status: "Under Review", trades: ["Fire Suppression"], gcContact: { companyName: "Whiting-Turner Contracting", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "opendata.dc.gov", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-dc-003", permitNumber: "B2026-0014567", address: "2000 K St NW", city: "Washington", state: "DC", zip: "20006", latitude: 38.9024, longitude: -77.0445, filingDate: daysAgo(7), description: "Plumbing renovation for Class A office building. New risers, fixtures, and water heaters.", estimatedValue: 540000, status: "Issued", trades: ["Plumbing"], gcContact: { companyName: "Gilbane Building Company", contactName: "Sarah Nguyen", phone: "(202) 555-0456", email: "snguyen@gilbaneco.com", confidence: "High" }, source: "opendata.dc.gov", sourceUpdatedAt: daysAgo(6) },
-];
-
-const PDX_PERMITS: Permit[] = [
-  { id: "p-pdx-001", permitNumber: "2026-001234-CO", address: "1001 SW 5th Ave", city: "Portland", state: "OR", zip: "97204", latitude: 45.5152, longitude: -122.6784, filingDate: daysAgo(2), description: "New construction — 7-story mixed-use with ground-floor commercial. Concrete and structural steel.", estimatedValue: 12000000, status: "Issued", trades: ["Structural Steel", "Concrete"], gcContact: { companyName: "Andersen Construction", contactName: "Erik Andersen", phone: "(503) 555-0198", email: "eandersen@andersen.com", confidence: "High" }, source: "portlandmaps.com", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-pdx-002", permitNumber: "2026-001567-CO", address: "4001 N Williams Ave", city: "Portland", state: "OR", zip: "97227", latitude: 45.5546, longitude: -122.6672, filingDate: daysAgo(5), description: "Tenant improvement for brewery and restaurant. Commercial kitchen, walk-in coolers, HVAC.", estimatedValue: 560000, status: "Under Review", trades: ["HVAC", "Plumbing", "General Construction"], gcContact: { companyName: "Walsh Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "portlandmaps.com", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-pdx-003", permitNumber: "2026-001890-CO", address: "815 NW Naito Pkwy", city: "Portland", state: "OR", zip: "97209", latitude: 45.5279, longitude: -122.6746, filingDate: daysAgo(8), description: "Roofing and facade repair for Pearl District commercial building. New membrane roof system.", estimatedValue: 890000, status: "Approved", trades: ["Roofing"], gcContact: { companyName: "Lease Crutcher Lewis", contactName: "Mike Lewis", phone: "(503) 555-0345", email: "mlewis@lclewis.com", confidence: "High" }, source: "portlandmaps.com", sourceUpdatedAt: daysAgo(7) },
-];
-
-const ORLANDO_PERMITS: Permit[] = [
-  { id: "p-orl-001", permitNumber: "ORL-2026-18923", address: "201 S Orange Ave", city: "Orlando", state: "FL", zip: "32801", latitude: 28.5383, longitude: -81.3789, filingDate: daysAgo(1), description: "HVAC system replacement for 12-story office tower. New rooftop units and ductwork.", estimatedValue: 2100000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "Brasfield & Gorrie", contactName: "David Gorrie", phone: "(407) 555-0198", email: "dgorrie@brasfieldgorrie.com", confidence: "High" }, source: "data.cityoforlando.net", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-orl-002", permitNumber: "ORL-2026-19034", address: "9800 International Dr", city: "Orlando", state: "FL", zip: "32819", latitude: 28.4340, longitude: -81.4706, filingDate: daysAgo(4), description: "New construction — commercial retail center with fire suppression systems.", estimatedValue: 5400000, status: "Under Review", trades: ["General Construction", "Fire Suppression"], gcContact: { companyName: "Hensel Phelps", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.cityoforlando.net", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-orl-003", permitNumber: "ORL-2026-19156", address: "400 W Church St", city: "Orlando", state: "FL", zip: "32801", latitude: 28.5406, longitude: -81.3834, filingDate: daysAgo(7), description: "Electrical upgrade for Amway Center parking structure. LED lighting and panel replacement.", estimatedValue: 780000, status: "Approved", trades: ["Electrical"], gcContact: { companyName: "PCL Construction", contactName: "Anna Torres", phone: "(407) 555-0345", email: "atorres@pcl.com", confidence: "High" }, source: "data.cityoforlando.net", sourceUpdatedAt: daysAgo(6) },
-];
-
-const COLUMBUS_PERMITS: Permit[] = [
-  { id: "p-cmh-001", permitNumber: "CMH-2026-B-08912", address: "250 S High St", city: "Columbus", state: "OH", zip: "43215", latitude: 39.9580, longitude: -82.9988, filingDate: daysAgo(2), description: "Tenant improvement — full buildout for tech company offices. HVAC, electrical, glass partitions.", estimatedValue: 1850000, status: "Issued", trades: ["General Construction", "HVAC", "Electrical"], gcContact: { companyName: "Turner Construction", contactName: "Brian Hayes", phone: "(614) 555-0198", email: "bhayes@turnerconstruction.com", confidence: "High" }, source: "opendata.columbus.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-cmh-002", permitNumber: "CMH-2026-B-09123", address: "525 N High St", city: "Columbus", state: "OH", zip: "43215", latitude: 39.9728, longitude: -83.0004, filingDate: daysAgo(5), description: "Plumbing renovation for Short North restaurant. Grease traps, water heaters, fixtures.", estimatedValue: 420000, status: "Under Review", trades: ["Plumbing"], gcContact: { companyName: "Elford Inc", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "opendata.columbus.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-cmh-003", permitNumber: "CMH-2026-B-09345", address: "55 Nationwide Blvd", city: "Columbus", state: "OH", zip: "43215", latitude: 39.9693, longitude: -83.0117, filingDate: daysAgo(8), description: "Structural steel reinforcement for Arena District parking garage expansion.", estimatedValue: 3200000, status: "Approved", trades: ["Structural Steel", "Concrete"], gcContact: { companyName: "Messer Construction", contactName: "Julie Messer", phone: "(614) 555-0456", email: "jmesser@messer.com", confidence: "High" }, source: "opendata.columbus.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const FW_PERMITS: Permit[] = [
-  { id: "p-fw-001", permitNumber: "FW-2026-CB-34521", address: "301 Commerce St", city: "Fort Worth", state: "TX", zip: "76102", latitude: 32.7555, longitude: -97.3308, filingDate: daysAgo(1), description: "New construction — 6-story commercial office building in Sundance Square.", estimatedValue: 9200000, status: "Issued", trades: ["General Construction", "Structural Steel"], gcContact: { companyName: "Linbeck Group", contactName: "Mark Linbeck", phone: "(817) 555-0198", email: "mlinbeck@linbeck.com", confidence: "High" }, source: "fortworthtexas.gov", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-fw-002", permitNumber: "FW-2026-CB-34789", address: "1600 S University Dr", city: "Fort Worth", state: "TX", zip: "76107", latitude: 32.7303, longitude: -97.3599, filingDate: daysAgo(4), description: "HVAC replacement for medical office complex. Four 25-ton rooftop units.", estimatedValue: 890000, status: "Under Review", trades: ["HVAC"], gcContact: { companyName: "Rogers-O'Brien Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "fortworthtexas.gov", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-fw-003", permitNumber: "FW-2026-CB-35012", address: "4200 South Fwy", city: "Fort Worth", state: "TX", zip: "76115", latitude: 32.7000, longitude: -97.3208, filingDate: daysAgo(7), description: "Roofing replacement for industrial warehouse. TPO membrane, 85,000 sq ft.", estimatedValue: 1500000, status: "Approved", trades: ["Roofing"], gcContact: { companyName: "Balfour Beatty", contactName: "Sarah Kim", phone: "(817) 555-0345", email: "skim@balfourbeatty.com", confidence: "High" }, source: "fortworthtexas.gov", sourceUpdatedAt: daysAgo(6) },
-];
-
-const LV_PERMITS: Permit[] = [
-  { id: "p-lv-001", permitNumber: "C-283456", address: "3570 S Las Vegas Blvd", city: "Las Vegas", state: "NV", zip: "89109", latitude: 36.1215, longitude: -115.1739, filingDate: daysAgo(2), description: "Hotel casino renovation — electrical service upgrade, new 4000A switchgear.", estimatedValue: 4500000, status: "Issued", trades: ["Electrical"], gcContact: { companyName: "McCarthy Building Companies", contactName: "Dan McCarthy", phone: "(702) 555-0198", email: "dmccarthy@mccarthy.com", confidence: "High" }, source: "mapdata.lasvegasnevada.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-lv-002", permitNumber: "C-284012", address: "200 S Main St", city: "Las Vegas", state: "NV", zip: "89101", latitude: 36.1677, longitude: -115.1499, filingDate: daysAgo(5), description: "New construction — 4-story commercial building downtown. Full plumbing and fire suppression.", estimatedValue: 7800000, status: "Under Review", trades: ["Plumbing", "Fire Suppression", "General Construction"], gcContact: { companyName: "Martin-Harris Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "mapdata.lasvegasnevada.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-lv-003", permitNumber: "C-284567", address: "6720 Via Austi Pkwy", city: "Las Vegas", state: "NV", zip: "89119", latitude: 36.0805, longitude: -115.1451, filingDate: daysAgo(8), description: "Concrete foundation and slab for new data center building. 50,000 sq ft.", estimatedValue: 2100000, status: "Approved", trades: ["Concrete"], gcContact: { companyName: "W.A. Richardson Builders", contactName: "Wayne Richardson", phone: "(702) 555-0345", email: "wrichardson@warichardson.com", confidence: "High" }, source: "mapdata.lasvegasnevada.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const PHX_PERMITS: Permit[] = [
-  { id: "p-phx-001", permitNumber: "17045678", address: "2 N Central Ave", city: "Phoenix", state: "AZ", zip: "85004", latitude: 33.4484, longitude: -112.0740, filingDate: daysAgo(1), description: "Commercial remodel — full HVAC and plumbing renovation for downtown office tower.", estimatedValue: 3200000, status: "Issued", trades: ["HVAC", "Plumbing"], gcContact: { companyName: "Sundt Construction", contactName: "Mike Sundt", phone: "(602) 555-0198", email: "msundt@sundt.com", confidence: "High" }, source: "maps.phoenix.gov", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-phx-002", permitNumber: "17046234", address: "4602 E Cactus Rd", city: "Phoenix", state: "AZ", zip: "85032", latitude: 33.5973, longitude: -111.9716, filingDate: daysAgo(4), description: "Commercial new construction — medical office with fire suppression.", estimatedValue: 6100000, status: "Under Review", trades: ["General Construction", "Fire Suppression"], gcContact: { companyName: "DPR Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "maps.phoenix.gov", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-phx-003", permitNumber: "17046789", address: "301 W Indian School Rd", city: "Phoenix", state: "AZ", zip: "85013", latitude: 33.4942, longitude: -112.0793, filingDate: daysAgo(7), description: "Glass and glazing — storefront replacement for retail strip mall. Tempered glass.", estimatedValue: 340000, status: "Approved", trades: ["Glass & Glazing"], gcContact: { companyName: "Kitchell Contractors", contactName: "Lisa Kitchell", phone: "(602) 555-0345", email: "lkitchell@kitchell.com", confidence: "High" }, source: "maps.phoenix.gov", sourceUpdatedAt: daysAgo(6) },
-];
-
-const RAL_PERMITS: Permit[] = [
-  { id: "p-ral-001", permitNumber: "BLDR-035488-2026", address: "150 Fayetteville St", city: "Raleigh", state: "NC", zip: "27601", latitude: 35.7796, longitude: -78.6382, filingDate: daysAgo(2), description: "New construction — 5-story mixed-use commercial with structural steel frame.", estimatedValue: 8900000, status: "Issued", trades: ["Structural Steel", "General Construction"], gcContact: { companyName: "Barnhill Contracting", contactName: "James Barnhill", phone: "(919) 555-0198", email: "jbarnhill@barnhill.com", confidence: "High" }, source: "data.raleighnc.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-ral-002", permitNumber: "BLDR-035612-2026", address: "5000 Departure Dr", city: "Raleigh", state: "NC", zip: "27616", latitude: 35.8765, longitude: -78.7870, filingDate: daysAgo(5), description: "Commercial tenant improvement — electrical and HVAC for biotech lab space.", estimatedValue: 1250000, status: "Under Review", trades: ["Electrical", "HVAC"], gcContact: { companyName: "Clancy & Theys Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.raleighnc.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-ral-003", permitNumber: "BLDR-035789-2026", address: "201 W Martin St", city: "Raleigh", state: "NC", zip: "27601", latitude: 35.7746, longitude: -78.6410, filingDate: daysAgo(8), description: "Demolition of existing warehouse for new development in warehouse district.", estimatedValue: 280000, status: "Approved", trades: ["Demolition"], gcContact: { companyName: "Resolute Building Company", contactName: "Tom Resolute", phone: "(919) 555-0345", email: "tresolute@resolute.com", confidence: "High" }, source: "data.raleighnc.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const TAMPA_PERMITS: Permit[] = [
-  { id: "p-tpa-001", permitNumber: "COM-2026-05678", address: "100 N Tampa St", city: "Tampa", state: "FL", zip: "33602", latitude: 27.9506, longitude: -82.4572, filingDate: daysAgo(1), description: "Concrete foundation for new 8-story commercial office in downtown Tampa.", estimatedValue: 4800000, status: "Issued", trades: ["Concrete", "General Construction"], gcContact: { companyName: "Skanska USA Building", contactName: "Erik Skanska", phone: "(813) 555-0198", email: "eskanska@skanska.com", confidence: "High" }, source: "hillsborough.maps.arcgis.com", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-tpa-002", permitNumber: "COM-2026-05912", address: "3702 Spectrum Blvd", city: "Tampa", state: "FL", zip: "33612", latitude: 28.0700, longitude: -82.4125, filingDate: daysAgo(4), description: "Roofing replacement for USF area commercial building. Modified bitumen and TPO.", estimatedValue: 650000, status: "Under Review", trades: ["Roofing"], gcContact: { companyName: "W.G. Mills Inc", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "hillsborough.maps.arcgis.com", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-tpa-003", permitNumber: "COM-2026-06234", address: "2223 N Westshore Blvd", city: "Tampa", state: "FL", zip: "33607", latitude: 27.9600, longitude: -82.5285, filingDate: daysAgo(7), description: "Fire suppression upgrade for 20-story Westshore office tower. New standpipe system.", estimatedValue: 1100000, status: "Approved", trades: ["Fire Suppression"], gcContact: { companyName: "Hardin Construction", contactName: "Bill Hardin", phone: "(813) 555-0345", email: "bhardin@hardin.com", confidence: "High" }, source: "hillsborough.maps.arcgis.com", sourceUpdatedAt: daysAgo(6) },
-];
-
-const CIN_PERMITS: Permit[] = [
-  { id: "p-cin-001", permitNumber: "CIN-2026-45012", address: "312 Elm St", city: "Cincinnati", state: "OH", zip: "45202", latitude: 39.1031, longitude: -84.5120, filingDate: daysAgo(2), description: "New HVAC system for 6-story downtown office building. VAV boxes with heat recovery.", estimatedValue: 1900000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "Turner Construction", contactName: "Mike Riley", phone: "(513) 555-0198", email: "mriley@turner.com", confidence: "High" }, source: "data.cincinnati-oh.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-cin-002", permitNumber: "CIN-2026-45234", address: "100 E Freedom Way", city: "Cincinnati", state: "OH", zip: "45202", latitude: 39.0968, longitude: -84.5094, filingDate: daysAgo(5), description: "Electrical service upgrade for riverfront commercial complex. New 2000A switchgear.", estimatedValue: 1200000, status: "Under Review", trades: ["Electrical"], gcContact: { companyName: "Messer Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.cincinnati-oh.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-cin-003", permitNumber: "CIN-2026-45456", address: "441 Vine St", city: "Cincinnati", state: "OH", zip: "45202", latitude: 39.1009, longitude: -84.5125, filingDate: daysAgo(8), description: "Roofing replacement for Carew Tower commercial floors. Modified bitumen system.", estimatedValue: 780000, status: "Approved", trades: ["Roofing"], gcContact: { companyName: "Al. Neyer", contactName: "Lisa Neyer", phone: "(513) 555-0345", email: "lneyer@alneyer.com", confidence: "High" }, source: "data.cincinnati-oh.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const BTR_PERMITS: Permit[] = [
-  { id: "p-btr-001", permitNumber: "BTR-2026-12345", address: "301 Main St", city: "Baton Rouge", state: "LA", zip: "70801", latitude: 30.4515, longitude: -91.1871, filingDate: daysAgo(1), description: "Commercial renovation — full HVAC and plumbing for downtown office building.", estimatedValue: 1500000, status: "Issued", trades: ["HVAC", "Plumbing"], gcContact: { companyName: "MAPP Construction", contactName: "John Mapp", phone: "(225) 555-0198", email: "jmapp@mapp.com", confidence: "High" }, source: "data.brla.gov", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-btr-002", permitNumber: "BTR-2026-12567", address: "7979 Independence Blvd", city: "Baton Rouge", state: "LA", zip: "70806", latitude: 30.4250, longitude: -91.1550, filingDate: daysAgo(4), description: "New construction — medical office with fire suppression and electrical systems.", estimatedValue: 4200000, status: "Under Review", trades: ["General Construction", "Fire Suppression", "Electrical"], gcContact: { companyName: "Cajun Industries", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.brla.gov", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-btr-003", permitNumber: "BTR-2026-12789", address: "451 Florida St", city: "Baton Rouge", state: "LA", zip: "70801", latitude: 30.4494, longitude: -91.1872, filingDate: daysAgo(7), description: "Concrete foundation work for new retail center on Florida Blvd.", estimatedValue: 950000, status: "Approved", trades: ["Concrete"], gcContact: { companyName: "Boh Bros Construction", contactName: "David Boh", phone: "(225) 555-0345", email: "dboh@bohbros.com", confidence: "High" }, source: "data.brla.gov", sourceUpdatedAt: daysAgo(6) },
-];
-
-const MOCO_PERMITS: Permit[] = [
-  { id: "p-moco-001", permitNumber: "MOCO-2026-0012", address: "7500 Wisconsin Ave", city: "Bethesda", state: "MD", zip: "20814", latitude: 39.0840, longitude: -77.1528, filingDate: daysAgo(2), description: "Commercial tenant improvement — new HVAC and electrical for Class A office space.", estimatedValue: 2400000, status: "Issued", trades: ["HVAC", "Electrical"], gcContact: { companyName: "Clark Construction", contactName: "James Clark", phone: "(301) 555-0198", email: "jclark@clarkconstruction.com", confidence: "High" }, source: "data.montgomerycountymd.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-moco-002", permitNumber: "MOCO-2026-0034", address: "11810 Grand Park Ave", city: "Rockville", state: "MD", zip: "20852", latitude: 39.0825, longitude: -77.1197, filingDate: daysAgo(5), description: "New construction — 4-story commercial building with retail and office.", estimatedValue: 6800000, status: "Under Review", trades: ["General Construction", "Structural Steel"], gcContact: { companyName: "Whiting-Turner", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.montgomerycountymd.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-moco-003", permitNumber: "MOCO-2026-0056", address: "15245 Shady Grove Rd", city: "Rockville", state: "MD", zip: "20850", latitude: 39.1123, longitude: -77.1856, filingDate: daysAgo(8), description: "Glass curtain wall replacement for biotech office building.", estimatedValue: 1800000, status: "Approved", trades: ["Glass & Glazing"], gcContact: { companyName: "Gilbane Building", contactName: "Tom Gilbane", phone: "(301) 555-0345", email: "tgilbane@gilbaneco.com", confidence: "High" }, source: "data.montgomerycountymd.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const MESA_PERMITS: Permit[] = [
-  { id: "p-mesa-001", permitNumber: "MESA-2026-COM-001", address: "200 W Main St", city: "Mesa", state: "AZ", zip: "85201", latitude: 33.4152, longitude: -111.8315, filingDate: daysAgo(1), description: "HVAC replacement for Mesa Arts Center commercial wing. New rooftop units.", estimatedValue: 980000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "Sundt Construction", contactName: "Mike Sundt", phone: "(480) 555-0198", email: "msundt@sundt.com", confidence: "High" }, source: "citydata.mesaaz.gov", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-mesa-002", permitNumber: "MESA-2026-COM-002", address: "1061 N Dobson Rd", city: "Mesa", state: "AZ", zip: "85201", latitude: 33.4303, longitude: -111.8729, filingDate: daysAgo(4), description: "New construction — medical office complex. Foundation and structural steel.", estimatedValue: 5200000, status: "Under Review", trades: ["Structural Steel", "Concrete"], gcContact: { companyName: "Willmeng Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "citydata.mesaaz.gov", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-mesa-003", permitNumber: "MESA-2026-COM-003", address: "6350 E Thomas Rd", city: "Mesa", state: "AZ", zip: "85215", latitude: 33.4797, longitude: -111.7200, filingDate: daysAgo(7), description: "Electrical service upgrade for commercial retail center. New panels and conduit.", estimatedValue: 420000, status: "Approved", trades: ["Electrical"], gcContact: { companyName: "Haydon Building Corp", contactName: "Steve Haydon", phone: "(480) 555-0345", email: "shaydon@haydon.com", confidence: "High" }, source: "citydata.mesaaz.gov", sourceUpdatedAt: daysAgo(6) },
-];
-
-const NOLA_PERMITS: Permit[] = [
-  { id: "p-nola-001", permitNumber: "NOLA-2026-18901", address: "1515 Poydras St", city: "New Orleans", state: "LA", zip: "70112", latitude: 29.9511, longitude: -90.0715, filingDate: daysAgo(2), description: "Commercial renovation — HVAC replacement for downtown high-rise. New chiller plant.", estimatedValue: 3400000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "Broadmoor LLC", contactName: "Mark Broadmoor", phone: "(504) 555-0198", email: "mbroadmoor@broadmoor.com", confidence: "High" }, source: "data.nola.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-nola-002", permitNumber: "NOLA-2026-19012", address: "400 Poydras St", city: "New Orleans", state: "LA", zip: "70130", latitude: 29.9493, longitude: -90.0696, filingDate: daysAgo(5), description: "Fire suppression system upgrade for Warehouse District commercial building.", estimatedValue: 880000, status: "Under Review", trades: ["Fire Suppression"], gcContact: { companyName: "Woodward Design+Build", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.nola.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-nola-003", permitNumber: "NOLA-2026-19134", address: "601 Loyola Ave", city: "New Orleans", state: "LA", zip: "70113", latitude: 29.9504, longitude: -90.0767, filingDate: daysAgo(8), description: "Plumbing renovation for hotel commercial spaces. New risers and fixtures.", estimatedValue: 640000, status: "Approved", trades: ["Plumbing"], gcContact: { companyName: "Palmisano Contractors", contactName: "Joe Palmisano", phone: "(504) 555-0345", email: "jpalmisano@palmisano.com", confidence: "High" }, source: "data.nola.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const KC_PERMITS: Permit[] = [
-  { id: "p-kc-001", permitNumber: "KC-2026-B-45012", address: "1 E Pershing Rd", city: "Kansas City", state: "MO", zip: "64108", latitude: 39.0825, longitude: -94.5838, filingDate: daysAgo(1), description: "New construction — 8-story commercial office tower in Crown Center area.", estimatedValue: 12000000, status: "Issued", trades: ["General Construction", "Structural Steel", "Concrete"], gcContact: { companyName: "JE Dunn Construction", contactName: "Steve Dunn", phone: "(816) 555-0198", email: "sdunn@jedunn.com", confidence: "High" }, source: "data.kcmo.org", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-kc-002", permitNumber: "KC-2026-B-45234", address: "4600 Madison Ave", city: "Kansas City", state: "MO", zip: "64112", latitude: 39.0447, longitude: -94.5885, filingDate: daysAgo(4), description: "Electrical service upgrade for Country Club Plaza commercial building.", estimatedValue: 890000, status: "Under Review", trades: ["Electrical"], gcContact: { companyName: "McCownGordon Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.kcmo.org", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-kc-003", permitNumber: "KC-2026-B-45456", address: "901 Grand Blvd", city: "Kansas City", state: "MO", zip: "64106", latitude: 39.1045, longitude: -94.5826, filingDate: daysAgo(7), description: "Roofing replacement for downtown commercial building. TPO membrane, 45,000 sq ft.", estimatedValue: 650000, status: "Approved", trades: ["Roofing"], gcContact: { companyName: "Haren & Laughlin", contactName: "Dan Haren", phone: "(816) 555-0345", email: "dharen@harenlaughlin.com", confidence: "High" }, source: "data.kcmo.org", sourceUpdatedAt: daysAgo(6) },
-];
-
-const HNL_PERMITS: Permit[] = [
-  { id: "p-hnl-001", permitNumber: "HNL-2026-BP-001", address: "1001 Bishop St", city: "Honolulu", state: "HI", zip: "96813", latitude: 21.3069, longitude: -157.8583, filingDate: daysAgo(2), description: "Commercial renovation — HVAC and fire suppression for downtown office tower.", estimatedValue: 2800000, status: "Issued", trades: ["HVAC", "Fire Suppression"], gcContact: { companyName: "Hawaiian Dredging Construction", contactName: "Mike Chang", phone: "(808) 555-0198", email: "mchang@hdcc.com", confidence: "High" }, source: "data.honolulu.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-hnl-002", permitNumber: "HNL-2026-BP-002", address: "2255 Kuhio Ave", city: "Honolulu", state: "HI", zip: "96815", latitude: 21.2776, longitude: -157.8213, filingDate: daysAgo(5), description: "New construction — commercial retail and restaurant in Waikiki.", estimatedValue: 4500000, status: "Under Review", trades: ["General Construction", "Plumbing"], gcContact: { companyName: "Albert C. Kobayashi", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.honolulu.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-hnl-003", permitNumber: "HNL-2026-BP-003", address: "500 Ala Moana Blvd", city: "Honolulu", state: "HI", zip: "96813", latitude: 21.2950, longitude: -157.8630, filingDate: daysAgo(8), description: "Concrete structural repair for Ala Moana commercial center parking structure.", estimatedValue: 1200000, status: "Approved", trades: ["Concrete"], gcContact: { companyName: "Nordic PCL Construction", contactName: "James Nordic", phone: "(808) 555-0345", email: "jnordic@nordicpcl.com", confidence: "High" }, source: "data.honolulu.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const PGC_PERMITS: Permit[] = [
-  { id: "p-pgc-001", permitNumber: "PGC-2026-0012", address: "9201 Basil Ct", city: "Largo", state: "MD", zip: "20774", latitude: 38.8816, longitude: -76.7794, filingDate: daysAgo(1), description: "Commercial new construction — warehouse and distribution center.", estimatedValue: 5600000, status: "Issued", trades: ["General Construction", "Concrete"], gcContact: { companyName: "Whiting-Turner", contactName: "Rob Turner", phone: "(301) 555-0198", email: "rturner@whiting-turner.com", confidence: "High" }, source: "data.princegeorgescountymd.gov", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-pgc-002", permitNumber: "PGC-2026-0034", address: "6411 Ivy Ln", city: "Greenbelt", state: "MD", zip: "20770", latitude: 38.9942, longitude: -76.8888, filingDate: daysAgo(4), description: "HVAC system replacement for office park complex near Greenbelt metro.", estimatedValue: 1300000, status: "Under Review", trades: ["HVAC"], gcContact: { companyName: "Donohoe Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.princegeorgescountymd.gov", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-pgc-003", permitNumber: "PGC-2026-0056", address: "3500 East-West Hwy", city: "Hyattsville", state: "MD", zip: "20782", latitude: 38.9547, longitude: -76.9453, filingDate: daysAgo(7), description: "Electrical upgrade for commercial retail center. New service entrance.", estimatedValue: 560000, status: "Approved", trades: ["Electrical"], gcContact: { companyName: "Rand Construction", contactName: "John Rand", phone: "(301) 555-0345", email: "jrand@randconstruction.com", confidence: "High" }, source: "data.princegeorgescountymd.gov", sourceUpdatedAt: daysAgo(6) },
-];
-
-const LOU_PERMITS: Permit[] = [
-  { id: "p-lou-001", permitNumber: "LOU-2026-COM-001", address: "400 W Market St", city: "Louisville", state: "KY", zip: "40202", latitude: 38.2527, longitude: -85.7585, filingDate: daysAgo(2), description: "Commercial renovation — full building HVAC upgrade for downtown office tower.", estimatedValue: 2200000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "Messer Construction", contactName: "Dan Messer", phone: "(502) 555-0198", email: "dmesser@messer.com", confidence: "High" }, source: "data.louisvilleky.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-lou-002", permitNumber: "LOU-2026-COM-002", address: "1355 S 4th St", city: "Louisville", state: "KY", zip: "40208", latitude: 38.2318, longitude: -85.7564, filingDate: daysAgo(5), description: "New construction — commercial retail building in Old Louisville.", estimatedValue: 3800000, status: "Under Review", trades: ["General Construction", "Electrical"], gcContact: { companyName: "Congleton-Hacker Co", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.louisvilleky.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-lou-003", permitNumber: "LOU-2026-COM-003", address: "951 S 3rd St", city: "Louisville", state: "KY", zip: "40203", latitude: 38.2366, longitude: -85.7549, filingDate: daysAgo(8), description: "Fire suppression upgrade for bourbon distillery commercial complex.", estimatedValue: 890000, status: "Approved", trades: ["Fire Suppression"], gcContact: { companyName: "EH Construction", contactName: "Ed Harris", phone: "(502) 555-0345", email: "eharris@ehconstruction.com", confidence: "High" }, source: "data.louisvilleky.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const SAC_PERMITS: Permit[] = [
-  { id: "p-sac-001", permitNumber: "SAC-2026-COM-001", address: "621 Capitol Mall", city: "Sacramento", state: "CA", zip: "95814", latitude: 38.5816, longitude: -121.4944, filingDate: daysAgo(1), description: "HVAC replacement for state office building. New energy-efficient rooftop units.", estimatedValue: 1800000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "DPR Construction", contactName: "Sarah DPR", phone: "(916) 555-0198", email: "sdpr@dpr.com", confidence: "High" }, source: "data.cityofsacramento.org", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-sac-002", permitNumber: "SAC-2026-COM-002", address: "1801 L St", city: "Sacramento", state: "CA", zip: "95811", latitude: 38.5755, longitude: -121.4842, filingDate: daysAgo(4), description: "New construction — 5-story commercial office in midtown Sacramento.", estimatedValue: 7200000, status: "Under Review", trades: ["General Construction", "Structural Steel"], gcContact: { companyName: "McCarthy Building Cos", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.cityofsacramento.org", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-sac-003", permitNumber: "SAC-2026-COM-003", address: "3615 Auburn Blvd", city: "Sacramento", state: "CA", zip: "95821", latitude: 38.6297, longitude: -121.3973, filingDate: daysAgo(7), description: "Plumbing renovation for commercial restaurant complex.", estimatedValue: 480000, status: "Approved", trades: ["Plumbing"], gcContact: { companyName: "Roebbelen Contracting", contactName: "Mike Roebbelen", phone: "(916) 555-0345", email: "mroebbelen@roebbelen.com", confidence: "High" }, source: "data.cityofsacramento.org", sourceUpdatedAt: daysAgo(6) },
-];
-
-const SA_PERMITS: Permit[] = [
-  { id: "p-sa-001", permitNumber: "SA-2026-BLDG-001", address: "300 E Commerce St", city: "San Antonio", state: "TX", zip: "78205", latitude: 29.4241, longitude: -98.4936, filingDate: daysAgo(2), description: "Commercial renovation — electrical and HVAC for River Walk hotel.", estimatedValue: 3600000, status: "Issued", trades: ["Electrical", "HVAC"], gcContact: { companyName: "Bartlett Cocke General Contractors", contactName: "Tom Cocke", phone: "(210) 555-0198", email: "tcocke@bartlettcocke.com", confidence: "High" }, source: "data.sanantonio.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-sa-002", permitNumber: "SA-2026-BLDG-002", address: "5800 Datapoint Dr", city: "San Antonio", state: "TX", zip: "78229", latitude: 29.4800, longitude: -98.5600, filingDate: daysAgo(5), description: "New construction — medical office with full fire suppression.", estimatedValue: 5800000, status: "Under Review", trades: ["General Construction", "Fire Suppression"], gcContact: { companyName: "Joeris General Contractors", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.sanantonio.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-sa-003", permitNumber: "SA-2026-BLDG-003", address: "100 W Houston St", city: "San Antonio", state: "TX", zip: "78205", latitude: 29.4260, longitude: -98.4951, filingDate: daysAgo(8), description: "Concrete and structural repairs for downtown parking garage.", estimatedValue: 920000, status: "Approved", trades: ["Concrete"], gcContact: { companyName: "SpawGlass Contractors", contactName: "Dan Glass", phone: "(210) 555-0345", email: "dglass@spawglass.com", confidence: "High" }, source: "data.sanantonio.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const BAL_PERMITS: Permit[] = [
-  { id: "p-bal-001", permitNumber: "BAL-2026-0012", address: "100 E Pratt St", city: "Baltimore", state: "MD", zip: "21202", latitude: 39.2868, longitude: -76.6122, filingDate: daysAgo(1), description: "HVAC renovation for Inner Harbor commercial building. New chiller system.", estimatedValue: 2100000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "Whiting-Turner", contactName: "James Turner", phone: "(410) 555-0198", email: "jturner@whiting-turner.com", confidence: "High" }, source: "geodata.baltimorecity.gov", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-bal-002", permitNumber: "BAL-2026-0034", address: "1 E Baltimore St", city: "Baltimore", state: "MD", zip: "21202", latitude: 39.2904, longitude: -76.6073, filingDate: daysAgo(4), description: "Electrical service upgrade for downtown office tower. New switchgear.", estimatedValue: 1400000, status: "Under Review", trades: ["Electrical"], gcContact: { companyName: "Barton Malow", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "geodata.baltimorecity.gov", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-bal-003", permitNumber: "BAL-2026-0056", address: "3600 Clipper Mill Rd", city: "Baltimore", state: "MD", zip: "21211", latitude: 39.3290, longitude: -76.6417, filingDate: daysAgo(7), description: "Demolition and new construction — mixed-use commercial in Hampden.", estimatedValue: 4500000, status: "Approved", trades: ["Demolition", "General Construction"], gcContact: { companyName: "Pinkney-Herbert", contactName: "Mark Herbert", phone: "(410) 555-0345", email: "mherbert@pinkney-herbert.com", confidence: "High" }, source: "geodata.baltimorecity.gov", sourceUpdatedAt: daysAgo(6) },
-];
-
-const MIA_PERMITS: Permit[] = [
-  { id: "p-mia-001", permitNumber: "MIA-2026-COM-001", address: "1111 Brickell Ave", city: "Miami", state: "FL", zip: "33131", latitude: 25.7617, longitude: -80.1918, filingDate: daysAgo(2), description: "Commercial renovation — full HVAC system for Brickell office tower.", estimatedValue: 4200000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "Suffolk Construction", contactName: "John Fish", phone: "(305) 555-0198", email: "jfish@suffolk.com", confidence: "High" }, source: "miamidade.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-mia-002", permitNumber: "MIA-2026-COM-002", address: "900 Biscayne Blvd", city: "Miami", state: "FL", zip: "33132", latitude: 25.7855, longitude: -80.1862, filingDate: daysAgo(5), description: "New construction — 12-story commercial tower in downtown Miami.", estimatedValue: 18000000, status: "Under Review", trades: ["General Construction", "Structural Steel", "Concrete"], gcContact: { companyName: "Plaza Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "miamidade.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-mia-003", permitNumber: "MIA-2026-COM-003", address: "2701 S Bayshore Dr", city: "Miami", state: "FL", zip: "33133", latitude: 25.7284, longitude: -80.2380, filingDate: daysAgo(8), description: "Glass and glazing — hurricane impact window replacement for Coconut Grove commercial.", estimatedValue: 1600000, status: "Approved", trades: ["Glass & Glazing"], gcContact: { companyName: "Coastal Construction Group", contactName: "Tom Murphy", phone: "(305) 555-0345", email: "tmurphy@coastal.com", confidence: "High" }, source: "miamidade.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const CLT_PERMITS: Permit[] = [
-  { id: "p-clt-001", permitNumber: "CLT-2026-COM-001", address: "301 S Tryon St", city: "Charlotte", state: "NC", zip: "28202", latitude: 35.2224, longitude: -80.8431, filingDate: daysAgo(1), description: "Commercial HVAC upgrade for uptown office tower. New VAV system.", estimatedValue: 2600000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "Balfour Beatty", contactName: "Mike Beatty", phone: "(704) 555-0198", email: "mbeatty@balfourbeatty.com", confidence: "High" }, source: "data.charlottenc.gov", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-clt-002", permitNumber: "CLT-2026-COM-002", address: "4801 E Independence Blvd", city: "Charlotte", state: "NC", zip: "28212", latitude: 35.2000, longitude: -80.7700, filingDate: daysAgo(4), description: "New construction — commercial retail center with fire suppression.", estimatedValue: 5400000, status: "Under Review", trades: ["General Construction", "Fire Suppression"], gcContact: { companyName: "Rodgers Builders", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.charlottenc.gov", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-clt-003", permitNumber: "CLT-2026-COM-003", address: "200 N College St", city: "Charlotte", state: "NC", zip: "28202", latitude: 35.2279, longitude: -80.8437, filingDate: daysAgo(7), description: "Electrical service upgrade for Bank of America tower.", estimatedValue: 1800000, status: "Approved", trades: ["Electrical"], gcContact: { companyName: "Holder Construction", contactName: "Jon Holder", phone: "(704) 555-0345", email: "jholder@holder.com", confidence: "High" }, source: "data.charlottenc.gov", sourceUpdatedAt: daysAgo(6) },
-];
-
-const DET_PERMITS: Permit[] = [
-  { id: "p-det-001", permitNumber: "DET-2026-B-001", address: "1 Campus Martius", city: "Detroit", state: "MI", zip: "48226", latitude: 42.3314, longitude: -83.0458, filingDate: daysAgo(2), description: "Commercial renovation — HVAC and electrical for downtown office building.", estimatedValue: 3100000, status: "Issued", trades: ["HVAC", "Electrical"], gcContact: { companyName: "Barton Malow", contactName: "Dave Malow", phone: "(313) 555-0198", email: "dmalow@bartonmalow.com", confidence: "High" }, source: "data.detroitmi.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-det-002", permitNumber: "DET-2026-B-002", address: "3011 W Grand Blvd", city: "Detroit", state: "MI", zip: "48202", latitude: 42.3691, longitude: -83.0838, filingDate: daysAgo(5), description: "New construction — mixed-use commercial in New Center area.", estimatedValue: 8500000, status: "Under Review", trades: ["General Construction", "Structural Steel"], gcContact: { companyName: "Christman Company", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.detroitmi.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-det-003", permitNumber: "DET-2026-B-003", address: "2727 Second Ave", city: "Detroit", state: "MI", zip: "48201", latitude: 42.3453, longitude: -83.0573, filingDate: daysAgo(8), description: "Plumbing renovation for Cass Corridor commercial building.", estimatedValue: 560000, status: "Approved", trades: ["Plumbing"], gcContact: { companyName: "Walbridge", contactName: "John Walbridge", phone: "(313) 555-0345", email: "jwalbridge@walbridge.com", confidence: "High" }, source: "data.detroitmi.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const TUC_PERMITS: Permit[] = [
-  { id: "p-tuc-001", permitNumber: "TUC-2026-COM-001", address: "150 N Stone Ave", city: "Tucson", state: "AZ", zip: "85701", latitude: 32.2226, longitude: -110.9747, filingDate: daysAgo(1), description: "HVAC replacement for downtown Tucson commercial office.", estimatedValue: 1200000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "Sundt Construction", contactName: "Erik Sundt", phone: "(520) 555-0198", email: "esundt@sundt.com", confidence: "High" }, source: "gis.tucsonaz.gov", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-tuc-002", permitNumber: "TUC-2026-COM-002", address: "4500 S Park Ave", city: "Tucson", state: "AZ", zip: "85714", latitude: 32.1807, longitude: -110.9620, filingDate: daysAgo(4), description: "New construction — commercial warehouse with fire suppression.", estimatedValue: 3800000, status: "Under Review", trades: ["General Construction", "Fire Suppression"], gcContact: { companyName: "Lloyd Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "gis.tucsonaz.gov", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-tuc-003", permitNumber: "TUC-2026-COM-003", address: "3660 E Sunrise Dr", city: "Tucson", state: "AZ", zip: "85718", latitude: 32.3225, longitude: -110.9178, filingDate: daysAgo(7), description: "Roofing replacement for Foothills commercial center.", estimatedValue: 520000, status: "Approved", trades: ["Roofing"], gcContact: { companyName: "Haydon Building Corp", contactName: "Rob Haydon", phone: "(520) 555-0345", email: "rhaydon@haydon.com", confidence: "High" }, source: "gis.tucsonaz.gov", sourceUpdatedAt: daysAgo(6) },
-];
-
-const ATL_PERMITS: Permit[] = [
-  { id: "p-atl-001", permitNumber: "ATL-2026-BB-001", address: "191 Peachtree St NE", city: "Atlanta", state: "GA", zip: "30303", latitude: 33.7590, longitude: -84.3880, filingDate: daysAgo(2), description: "Commercial renovation — HVAC system replacement for Peachtree Center.", estimatedValue: 4100000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "Brasfield & Gorrie", contactName: "David Gorrie", phone: "(404) 555-0198", email: "dgorrie@brasfieldgorrie.com", confidence: "High" }, source: "gis.atlantaga.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-atl-002", permitNumber: "ATL-2026-BB-002", address: "725 Ponce De Leon Ave NE", city: "Atlanta", state: "GA", zip: "30306", latitude: 33.7726, longitude: -84.3657, filingDate: daysAgo(5), description: "Tenant improvement — electrical and plumbing for Ponce City Market.", estimatedValue: 2300000, status: "Under Review", trades: ["Electrical", "Plumbing"], gcContact: { companyName: "Holder Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "gis.atlantaga.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-atl-003", permitNumber: "ATL-2026-BB-003", address: "3393 Peachtree Rd NE", city: "Atlanta", state: "GA", zip: "30326", latitude: 33.8468, longitude: -84.3624, filingDate: daysAgo(8), description: "Glass curtain wall installation for Buckhead commercial tower.", estimatedValue: 5600000, status: "Approved", trades: ["Glass & Glazing"], gcContact: { companyName: "Batson-Cook Company", contactName: "Jim Cook", phone: "(404) 555-0345", email: "jcook@batsoncook.com", confidence: "High" }, source: "gis.atlantaga.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const MKE_PERMITS: Permit[] = [
-  { id: "p-mke-001", permitNumber: "MKE-2026-COM-001", address: "411 E Wisconsin Ave", city: "Milwaukee", state: "WI", zip: "53202", latitude: 43.0389, longitude: -87.9065, filingDate: daysAgo(1), description: "Commercial HVAC replacement for downtown office building.", estimatedValue: 1600000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "CG Schmidt", contactName: "Mark Schmidt", phone: "(414) 555-0198", email: "mschmidt@cgschmidt.com", confidence: "High" }, source: "data.milwaukee.gov", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-mke-002", permitNumber: "MKE-2026-COM-002", address: "600 E Greenfield Ave", city: "Milwaukee", state: "WI", zip: "53204", latitude: 43.0157, longitude: -87.9078, filingDate: daysAgo(4), description: "New construction — commercial warehouse in Walker's Point.", estimatedValue: 4800000, status: "Under Review", trades: ["General Construction", "Concrete"], gcContact: { companyName: "JP Cullen", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.milwaukee.gov", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-mke-003", permitNumber: "MKE-2026-COM-003", address: "770 N Jefferson St", city: "Milwaukee", state: "WI", zip: "53202", latitude: 43.0458, longitude: -87.9079, filingDate: daysAgo(7), description: "Electrical upgrade for Third Ward commercial building.", estimatedValue: 720000, status: "Approved", trades: ["Electrical"], gcContact: { companyName: "Miron Construction", contactName: "David Miron", phone: "(414) 555-0345", email: "dmiron@miron-construction.com", confidence: "High" }, source: "data.milwaukee.gov", sourceUpdatedAt: daysAgo(6) },
-];
-
-const ABQ_PERMITS: Permit[] = [
-  { id: "p-abq-001", permitNumber: "ABQ-2026-BP-001", address: "625 Silver Ave SW", city: "Albuquerque", state: "NM", zip: "87102", latitude: 35.0844, longitude: -106.6504, filingDate: daysAgo(2), description: "Commercial renovation — HVAC for downtown office building.", estimatedValue: 1400000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "Jaynes Corporation", contactName: "Mike Jaynes", phone: "(505) 555-0198", email: "mjaynes@jaynes.com", confidence: "High" }, source: "cabq.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-abq-002", permitNumber: "ABQ-2026-BP-002", address: "6200 Uptown Blvd NE", city: "Albuquerque", state: "NM", zip: "87110", latitude: 35.1093, longitude: -106.6092, filingDate: daysAgo(5), description: "New construction — commercial retail center on Uptown.", estimatedValue: 6200000, status: "Under Review", trades: ["General Construction", "Structural Steel"], gcContact: { companyName: "FBT Architects/Builders", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "cabq.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-abq-003", permitNumber: "ABQ-2026-BP-003", address: "4801 Lang Ave NE", city: "Albuquerque", state: "NM", zip: "87109", latitude: 35.1340, longitude: -106.5902, filingDate: daysAgo(8), description: "Fire suppression upgrade for industrial warehouse.", estimatedValue: 780000, status: "Approved", trades: ["Fire Suppression"], gcContact: { companyName: "Bradbury Stamm Construction", contactName: "Tom Stamm", phone: "(505) 555-0345", email: "tstamm@bradburystamm.com", confidence: "High" }, source: "cabq.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const VB_PERMITS: Permit[] = [
-  { id: "p-vb-001", permitNumber: "VB-2026-BDG-001", address: "4525 Main St", city: "Virginia Beach", state: "VA", zip: "23462", latitude: 36.8529, longitude: -75.9780, filingDate: daysAgo(1), description: "Commercial tenant improvement — HVAC and electrical for Town Center office.", estimatedValue: 1200000, status: "Issued", trades: ["HVAC", "Electrical"], gcContact: { companyName: "W.M. Jordan Company", contactName: "Bill Jordan", phone: "(757) 555-0198", email: "bjordan@wmjordan.com", confidence: "High" }, source: "data.virginiabeach.gov", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-vb-002", permitNumber: "VB-2026-BDG-002", address: "1860 Laskin Rd", city: "Virginia Beach", state: "VA", zip: "23454", latitude: 36.8622, longitude: -75.9816, filingDate: daysAgo(4), description: "New construction — commercial hotel near oceanfront.", estimatedValue: 9200000, status: "Under Review", trades: ["General Construction", "Plumbing"], gcContact: { companyName: "S.B. Ballard Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.virginiabeach.gov", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-vb-003", permitNumber: "VB-2026-BDG-003", address: "5000 Greenwich Rd", city: "Virginia Beach", state: "VA", zip: "23462", latitude: 36.8461, longitude: -76.1153, filingDate: daysAgo(7), description: "Roofing replacement for corporate office building.", estimatedValue: 480000, status: "Approved", trades: ["Roofing"], gcContact: { companyName: "Hourigan Construction", contactName: "Dave Hourigan", phone: "(757) 555-0345", email: "dhourigan@hourigan.com", confidence: "High" }, source: "data.virginiabeach.gov", sourceUpdatedAt: daysAgo(6) },
-];
-
-const ELP_PERMITS: Permit[] = [
-  { id: "p-elp-001", permitNumber: "ELP-2026-COM-001", address: "401 E Franklin Ave", city: "El Paso", state: "TX", zip: "79901", latitude: 31.7619, longitude: -106.4850, filingDate: daysAgo(2), description: "Commercial renovation — full electrical upgrade for downtown building.", estimatedValue: 980000, status: "Issued", trades: ["Electrical"], gcContact: { companyName: "Hunt Building Company", contactName: "Ray Hunt", phone: "(915) 555-0198", email: "rhunt@huntcompanies.com", confidence: "High" }, source: "gis.elpasotexas.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-elp-002", permitNumber: "ELP-2026-COM-002", address: "6049 N Mesa St", city: "El Paso", state: "TX", zip: "79912", latitude: 31.8250, longitude: -106.5300, filingDate: daysAgo(5), description: "New construction — commercial office building on Mesa corridor.", estimatedValue: 4600000, status: "Under Review", trades: ["General Construction", "HVAC"], gcContact: { companyName: "Peabody Engineering", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "gis.elpasotexas.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-elp-003", permitNumber: "ELP-2026-COM-003", address: "100 W Overland Ave", city: "El Paso", state: "TX", zip: "79901", latitude: 31.7560, longitude: -106.4880, filingDate: daysAgo(8), description: "Concrete foundation for new retail center in downtown.", estimatedValue: 1200000, status: "Approved", trades: ["Concrete"], gcContact: { companyName: "Western Refining Construction", contactName: "Carlos Garcia", phone: "(915) 555-0345", email: "cgarcia@westernrefining.com", confidence: "High" }, source: "gis.elpasotexas.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const MEM_PERMITS: Permit[] = [
-  { id: "p-mem-001", permitNumber: "MEM-2026-COM-001", address: "119 S Main St", city: "Memphis", state: "TN", zip: "38103", latitude: 35.1495, longitude: -90.0490, filingDate: daysAgo(1), description: "Commercial renovation — HVAC for downtown Memphis office building.", estimatedValue: 1800000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "Grinder Taber & Grinder", contactName: "Tom Grinder", phone: "(901) 555-0198", email: "tgrinder@gtg.com", confidence: "High" }, source: "data.memphistn.gov", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-mem-002", permitNumber: "MEM-2026-COM-002", address: "3050 Walnut Grove Rd", city: "Memphis", state: "TN", zip: "38111", latitude: 35.1229, longitude: -89.9316, filingDate: daysAgo(4), description: "New construction — medical office complex in East Memphis.", estimatedValue: 6800000, status: "Under Review", trades: ["General Construction", "Plumbing", "Electrical"], gcContact: { companyName: "Flintco", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.memphistn.gov", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-mem-003", permitNumber: "MEM-2026-COM-003", address: "495 Union Ave", city: "Memphis", state: "TN", zip: "38103", latitude: 35.1432, longitude: -90.0398, filingDate: daysAgo(7), description: "Fire suppression upgrade for Beale Street commercial complex.", estimatedValue: 920000, status: "Approved", trades: ["Fire Suppression"], gcContact: { companyName: "Allen & Hoshall", contactName: "Jim Allen", phone: "(901) 555-0345", email: "jallen@allenhoshall.com", confidence: "High" }, source: "data.memphistn.gov", sourceUpdatedAt: daysAgo(6) },
-];
-
-const PGH_PERMITS: Permit[] = [
-  { id: "p-pgh-001", permitNumber: "PGH-2026-BDA-001", address: "600 Grant St", city: "Pittsburgh", state: "PA", zip: "15219", latitude: 40.4406, longitude: -79.9959, filingDate: daysAgo(2), description: "Commercial HVAC renovation for USX Tower office floors.", estimatedValue: 3200000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "PJ Dick Inc", contactName: "Pat Dick", phone: "(412) 555-0198", email: "pdick@pjdick.com", confidence: "High" }, source: "data.wprdc.org", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-pgh-002", permitNumber: "PGH-2026-BDA-002", address: "2100 Wharton St", city: "Pittsburgh", state: "PA", zip: "15203", latitude: 40.4284, longitude: -79.9778, filingDate: daysAgo(5), description: "New construction — commercial building in South Side Works.", estimatedValue: 7500000, status: "Under Review", trades: ["General Construction", "Structural Steel"], gcContact: { companyName: "Mascaro Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.wprdc.org", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-pgh-003", permitNumber: "PGH-2026-BDA-003", address: "100 Art Rooney Ave", city: "Pittsburgh", state: "PA", zip: "15212", latitude: 40.4468, longitude: -80.0158, filingDate: daysAgo(8), description: "Electrical upgrade for North Shore commercial district.", estimatedValue: 890000, status: "Approved", trades: ["Electrical"], gcContact: { companyName: "Rycon Construction", contactName: "Todd Rycon", phone: "(412) 555-0345", email: "trycon@rycon.com", confidence: "High" }, source: "data.wprdc.org", sourceUpdatedAt: daysAgo(7) },
-];
-
-const DUR_PERMITS: Permit[] = [
-  { id: "p-dur-001", permitNumber: "DUR-2026-BP-001", address: "300 W Main St", city: "Durham", state: "NC", zip: "27701", latitude: 35.9940, longitude: -78.8986, filingDate: daysAgo(2), description: "Commercial renovation — HVAC and electrical for downtown office building.", estimatedValue: 2100000, status: "Issued", trades: ["HVAC", "Electrical"], gcContact: { companyName: "Barnhill Contracting", contactName: "Mike Barnhill", phone: "(919) 555-0198", email: "mbarnhill@barnhill.com", confidence: "High" }, source: "webgis.durhamnc.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-dur-002", permitNumber: "DUR-2026-BP-002", address: "2200 W Main St", city: "Durham", state: "NC", zip: "27705", latitude: 35.9963, longitude: -78.9232, filingDate: daysAgo(5), description: "New construction — mixed-use commercial in West Durham.", estimatedValue: 6500000, status: "Under Review", trades: ["General Construction", "Structural Steel"], gcContact: { companyName: "Clancy & Theys Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "webgis.durhamnc.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-dur-003", permitNumber: "DUR-2026-BP-003", address: "901 W Main St", city: "Durham", state: "NC", zip: "27701", latitude: 35.9968, longitude: -78.9087, filingDate: daysAgo(8), description: "Fire suppression upgrade for American Tobacco Campus.", estimatedValue: 1400000, status: "Approved", trades: ["Fire Suppression"], gcContact: { companyName: "Choate Construction", contactName: "John Choate", phone: "(919) 555-0345", email: "jchoate@choate.com", confidence: "High" }, source: "webgis.durhamnc.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const BUF_PERMITS: Permit[] = [
-  { id: "p-buf-001", permitNumber: "BUF-2026-BP-001", address: "200 Delaware Ave", city: "Buffalo", state: "NY", zip: "14202", latitude: 42.8865, longitude: -78.8754, filingDate: daysAgo(3), description: "Commercial renovation — interior buildout for new office space downtown.", estimatedValue: 3200000, status: "Issued", trades: ["General Construction", "Electrical"], gcContact: { companyName: "LP Ciminelli", contactName: "Paul Ciminelli", phone: "(716) 555-0112", email: "pciminelli@lpciminelli.com", confidence: "High" }, source: "data.buffalony.gov", sourceUpdatedAt: daysAgo(2) },
-  { id: "p-buf-002", permitNumber: "BUF-2026-BP-002", address: "745 Main St", city: "Buffalo", state: "NY", zip: "14203", latitude: 42.8920, longitude: -78.8719, filingDate: daysAgo(6), description: "New HVAC system for mixed-use building on Main Street.", estimatedValue: 1800000, status: "Under Review", trades: ["HVAC"], gcContact: { companyName: "Uniland Development", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.buffalony.gov", sourceUpdatedAt: daysAgo(5) },
-  { id: "p-buf-003", permitNumber: "BUF-2026-BP-003", address: "1 Canalside", city: "Buffalo", state: "NY", zip: "14202", latitude: 42.8777, longitude: -78.8787, filingDate: daysAgo(10), description: "Structural steel erection for waterfront commercial building.", estimatedValue: 8500000, status: "Approved", trades: ["Structural Steel", "Concrete"], gcContact: { companyName: "Montante Construction", contactName: "Carl Montante", phone: "(716) 555-0234", email: "cmontante@montante.com", confidence: "High" }, source: "data.buffalony.gov", sourceUpdatedAt: daysAgo(9) },
-];
-
-const WICH_PERMITS: Permit[] = [
-  { id: "p-wich-001", permitNumber: "WICH-2026-BP-001", address: "100 N Broadway Ave", city: "Wichita", state: "KS", zip: "67202", latitude: 37.6872, longitude: -97.3377, filingDate: daysAgo(2), description: "Commercial tenant improvement — restaurant buildout in Old Town.", estimatedValue: 1500000, status: "Issued", trades: ["General Construction", "Plumbing"], gcContact: { companyName: "Dondlinger & Sons", contactName: "Greg Dondlinger", phone: "(316) 555-0188", email: "greg@dondlinger.com", confidence: "High" }, source: "gismaps.wichita.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-wich-002", permitNumber: "WICH-2026-BP-002", address: "7700 E Kellogg Dr", city: "Wichita", state: "KS", zip: "67207", latitude: 37.6943, longitude: -97.2457, filingDate: daysAgo(5), description: "New construction — retail strip center east Wichita.", estimatedValue: 4200000, status: "Under Review", trades: ["General Construction", "Roofing", "Concrete"], gcContact: { companyName: "Key Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "gismaps.wichita.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-wich-003", permitNumber: "WICH-2026-BP-003", address: "550 N Main St", city: "Wichita", state: "KS", zip: "67203", latitude: 37.6958, longitude: -97.3381, filingDate: daysAgo(9), description: "Fire alarm and sprinkler upgrade for commercial warehouse.", estimatedValue: 900000, status: "Approved", trades: ["Fire Suppression", "Electrical"], gcContact: { companyName: "Hutton Construction", contactName: "Tim Hutton", phone: "(316) 555-0322", email: "thutton@hutton.com", confidence: "High" }, source: "gismaps.wichita.gov", sourceUpdatedAt: daysAgo(8) },
-];
-
-const SPK_PERMITS: Permit[] = [
-  { id: "p-spk-001", permitNumber: "SPK-2026-BP-001", address: "808 W Main Ave", city: "Spokane", state: "WA", zip: "99201", latitude: 47.6588, longitude: -117.4260, filingDate: daysAgo(3), description: "Commercial renovation — glass storefront replacement downtown.", estimatedValue: 950000, status: "Issued", trades: ["Glass & Glazing", "General Construction"], gcContact: { companyName: "Garco Construction", contactName: "Mark Garceau", phone: "(509) 555-0145", email: "mgarceau@garco.com", confidence: "High" }, source: "spokanegis.org", sourceUpdatedAt: daysAgo(2) },
-  { id: "p-spk-002", permitNumber: "SPK-2026-BP-002", address: "1 N Post St", city: "Spokane", state: "WA", zip: "99201", latitude: 47.6593, longitude: -117.4187, filingDate: daysAgo(7), description: "Electrical panel upgrade for River Park Square commercial complex.", estimatedValue: 2800000, status: "Under Review", trades: ["Electrical"], gcContact: { companyName: "Lydig Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "spokanegis.org", sourceUpdatedAt: daysAgo(6) },
-  { id: "p-spk-003", permitNumber: "SPK-2026-BP-003", address: "4727 S Regal St", city: "Spokane", state: "WA", zip: "99223", latitude: 47.6161, longitude: -117.3612, filingDate: daysAgo(11), description: "New concrete foundation for south Spokane medical office.", estimatedValue: 5200000, status: "Approved", trades: ["Concrete", "General Construction"], gcContact: { companyName: "Wells & Company", contactName: "Jeff Wells", phone: "(509) 555-0267", email: "jwells@wellsco.com", confidence: "High" }, source: "spokanegis.org", sourceUpdatedAt: daysAgo(10) },
-];
-
-const CHS_PERMITS: Permit[] = [
-  { id: "p-chs-001", permitNumber: "CHS-2026-BP-001", address: "235 Meeting St", city: "Charleston", state: "SC", zip: "29401", latitude: 32.7822, longitude: -79.9332, filingDate: daysAgo(2), description: "Commercial renovation — hotel lobby and restaurant buildout.", estimatedValue: 4800000, status: "Issued", trades: ["General Construction", "Plumbing", "HVAC"], gcContact: { companyName: "Choate Construction", contactName: "David Choate", phone: "(843) 555-0178", email: "dchoate@choate.com", confidence: "High" }, source: "charleston-sc.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-chs-002", permitNumber: "CHS-2026-BP-002", address: "1 Broad St", city: "Charleston", state: "SC", zip: "29401", latitude: 32.7738, longitude: -79.9302, filingDate: daysAgo(6), description: "New roofing membrane for historic commercial building.", estimatedValue: 720000, status: "Approved", trades: ["Roofing"], gcContact: { companyName: "Hess Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "charleston-sc.gov", sourceUpdatedAt: daysAgo(5) },
-  { id: "p-chs-003", permitNumber: "CHS-2026-BP-003", address: "999 Morrison Dr", city: "Charleston", state: "SC", zip: "29403", latitude: 32.8043, longitude: -79.9544, filingDate: daysAgo(9), description: "New construction — mixed-use commercial on Upper Peninsula.", estimatedValue: 12000000, status: "Under Review", trades: ["Structural Steel", "Concrete", "General Construction"], gcContact: { companyName: "Mashburn Construction", contactName: "Frank Mashburn", phone: "(843) 555-0390", email: "fmashburn@mashburn.com", confidence: "High" }, source: "charleston-sc.gov", sourceUpdatedAt: daysAgo(8) },
-];
-
-const HTF_PERMITS: Permit[] = [
-  { id: "p-htf-001", permitNumber: "HTF-2026-BP-001", address: "100 Constitution Plaza", city: "Hartford", state: "CT", zip: "06103", latitude: 41.7637, longitude: -72.6701, filingDate: daysAgo(3), description: "Commercial HVAC replacement for downtown office tower.", estimatedValue: 3100000, status: "Issued", trades: ["HVAC"], gcContact: { companyName: "O&G Industries", contactName: "Brian O'Rourke", phone: "(860) 555-0134", email: "borourke@ogind.com", confidence: "High" }, source: "gis.hartford.gov", sourceUpdatedAt: daysAgo(2) },
-  { id: "p-htf-002", permitNumber: "HTF-2026-BP-002", address: "1 Financial Plaza", city: "Hartford", state: "CT", zip: "06103", latitude: 41.7649, longitude: -72.6741, filingDate: daysAgo(7), description: "Interior demolition and tenant improvement for insurance company offices.", estimatedValue: 5600000, status: "Under Review", trades: ["Demolition", "General Construction"], gcContact: { companyName: "Gilbane Building", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "gis.hartford.gov", sourceUpdatedAt: daysAgo(6) },
-  { id: "p-htf-003", permitNumber: "HTF-2026-BP-003", address: "10 Columbus Blvd", city: "Hartford", state: "CT", zip: "06106", latitude: 41.7529, longitude: -72.6702, filingDate: daysAgo(10), description: "Fire suppression system upgrade for riverfront commercial complex.", estimatedValue: 1400000, status: "Approved", trades: ["Fire Suppression", "Plumbing"], gcContact: { companyName: "Dimeo Construction", contactName: "Tony Dimeo", phone: "(860) 555-0289", email: "tdimeo@dimeo.com", confidence: "High" }, source: "gis.hartford.gov", sourceUpdatedAt: daysAgo(9) },
-];
-
-const CLE_PERMITS: Permit[] = [
-  { id: "p-cle-001", permitNumber: "CLE-2026-BP-001", address: "1100 Euclid Ave", city: "Cleveland", state: "OH", zip: "44115", latitude: 41.4998, longitude: -81.6868, filingDate: daysAgo(2), description: "Interior build-out for new downtown retail space including electrical and HVAC.", estimatedValue: 2800000, status: "Issued", trades: ["HVAC", "Electrical"], gcContact: { companyName: "Gilbane Building", contactName: "Mark Soinski", phone: "(216) 555-0134", email: "msoinski@gilbane.com", confidence: "High" }, source: "data.clevelandohio.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-cle-002", permitNumber: "CLE-2026-BP-002", address: "2000 Sycamore St", city: "Cleveland", state: "OH", zip: "44113", latitude: 41.4845, longitude: -81.6999, filingDate: daysAgo(6), description: "Structural steel erection for mixed-use commercial building in Tremont.", estimatedValue: 12500000, status: "Under Review", trades: ["Structural Steel", "Concrete"], gcContact: { companyName: "Welty Building Co", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.clevelandohio.gov", sourceUpdatedAt: daysAgo(5) },
-  { id: "p-cle-003", permitNumber: "CLE-2026-BP-003", address: "700 Huron Rd E", city: "Cleveland", state: "OH", zip: "44115", latitude: 41.4964, longitude: -81.6887, filingDate: daysAgo(9), description: "Fire suppression system upgrade for Playhouse Square theater complex.", estimatedValue: 1800000, status: "Approved", trades: ["Fire Suppression", "Plumbing"], gcContact: { companyName: "Marous Brothers Construction", contactName: "Tom Marous", phone: "(216) 555-0287", email: "tmarous@marous.com", confidence: "High" }, source: "data.clevelandohio.gov", sourceUpdatedAt: daysAgo(8) },
-];
-
-const COS_PERMITS: Permit[] = [
-  { id: "p-cos-001", permitNumber: "COS-2026-BP-001", address: "102 S Tejon St", city: "Colorado Springs", state: "CO", zip: "80903", latitude: 38.8338, longitude: -104.8253, filingDate: daysAgo(3), description: "Tenant improvement for ground-floor commercial space including new HVAC.", estimatedValue: 950000, status: "Issued", trades: ["HVAC", "General Construction"], gcContact: { companyName: "GE Johnson Construction", contactName: "Ryan Hicks", phone: "(719) 555-0122", email: "rhicks@gejohnson.com", confidence: "High" }, source: "maps.pprbd.org", sourceUpdatedAt: daysAgo(2) },
-  { id: "p-cos-002", permitNumber: "COS-2026-BP-002", address: "5475 Tech Center Dr", city: "Colorado Springs", state: "CO", zip: "80919", latitude: 38.8932, longitude: -104.7880, filingDate: daysAgo(5), description: "New commercial office building with rooftop solar installation.", estimatedValue: 8200000, status: "Under Review", trades: ["Electrical", "Roofing", "General Construction"], gcContact: { companyName: "Nunn Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "maps.pprbd.org", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-cos-003", permitNumber: "COS-2026-BP-003", address: "1 Olympic Plaza", city: "Colorado Springs", state: "CO", zip: "80909", latitude: 38.8012, longitude: -104.7589, filingDate: daysAgo(8), description: "Plumbing renovation for commercial training facility.", estimatedValue: 620000, status: "Approved", trades: ["Plumbing"], gcContact: { companyName: "Colarelli Construction", contactName: "Steve Colarelli", phone: "(719) 555-0198", email: "steve@colarelli.com", confidence: "High" }, source: "maps.pprbd.org", sourceUpdatedAt: daysAgo(7) },
-];
-
-const BOI_PERMITS: Permit[] = [
-  { id: "p-boi-001", permitNumber: "BOI-2026-BP-001", address: "999 W Main St", city: "Boise", state: "ID", zip: "83702", latitude: 43.6145, longitude: -116.2050, filingDate: daysAgo(4), description: "New commercial building shell and core with structural steel frame.", estimatedValue: 6500000, status: "Issued", trades: ["Structural Steel", "Concrete"], gcContact: { companyName: "ESI Construction", contactName: "Jake Ellis", phone: "(208) 555-0167", email: "jellis@esiconstruction.com", confidence: "High" }, source: "opendata.cityofboise.org", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-boi-002", permitNumber: "BOI-2026-BP-002", address: "720 W Idaho St", city: "Boise", state: "ID", zip: "83702", latitude: 43.6162, longitude: -116.2024, filingDate: daysAgo(7), description: "Electrical service upgrade for downtown office building.", estimatedValue: 380000, status: "Under Review", trades: ["Electrical"], gcContact: { companyName: "Wright Brothers", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "opendata.cityofboise.org", sourceUpdatedAt: daysAgo(6) },
-  { id: "p-boi-003", permitNumber: "BOI-2026-BP-003", address: "3100 S Vista Ave", city: "Boise", state: "ID", zip: "83705", latitude: 43.5835, longitude: -116.2228, filingDate: daysAgo(11), description: "Glass curtain wall installation for new medical office building.", estimatedValue: 2100000, status: "Approved", trades: ["Glass & Glazing", "General Construction"], gcContact: { companyName: "Engineered Structures Inc", contactName: "Dave Petersen", phone: "(208) 555-0233", email: "dpetersen@esiidaho.com", confidence: "High" }, source: "opendata.cityofboise.org", sourceUpdatedAt: daysAgo(10) },
-];
-
-const GSO_PERMITS: Permit[] = [
-  { id: "p-gso-001", permitNumber: "GSO-2026-BP-001", address: "300 N Elm St", city: "Greensboro", state: "NC", zip: "27401", latitude: 36.0743, longitude: -79.7889, filingDate: daysAgo(2), description: "Demolition and new build for downtown commercial mixed-use development.", estimatedValue: 9800000, status: "Issued", trades: ["Demolition", "General Construction"], gcContact: { companyName: "Samet Corporation", contactName: "Lisa Samet", phone: "(336) 555-0145", email: "lsamet@sametcorp.com", confidence: "High" }, source: "gis.greensboro-nc.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-gso-002", permitNumber: "GSO-2026-BP-002", address: "4600 W Market St", city: "Greensboro", state: "NC", zip: "27407", latitude: 36.0642, longitude: -79.8412, filingDate: daysAgo(5), description: "Roofing replacement and HVAC upgrade for retail shopping center.", estimatedValue: 1600000, status: "Under Review", trades: ["Roofing", "HVAC"], gcContact: { companyName: "FS Ervin Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "gis.greensboro-nc.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-gso-003", permitNumber: "GSO-2026-BP-003", address: "1 Centerpointe Dr", city: "Greensboro", state: "NC", zip: "27409", latitude: 36.0855, longitude: -79.8670, filingDate: daysAgo(9), description: "Fire suppression system installation for new warehouse distribution center.", estimatedValue: 3200000, status: "Approved", trades: ["Fire Suppression", "Plumbing"], gcContact: { companyName: "Beam Construction", contactName: "Rick Beam", phone: "(336) 555-0289", email: "rbeam@beamconstruction.com", confidence: "High" }, source: "gis.greensboro-nc.gov", sourceUpdatedAt: daysAgo(8) },
-];
-
-const KNX_PERMITS: Permit[] = [
-  { id: "p-knx-001", permitNumber: "BP-2026-0401", address: "865 Ebenezer Rd", city: "Knoxville", state: "TN", zip: "37923", latitude: 35.9332, longitude: -84.0211, filingDate: daysAgo(4), description: "New commercial office building construction.", estimatedValue: 3800000, status: "Issued", trades: ["Concrete", "General Construction"], gcContact: { companyName: "Denark Construction", contactName: "Mark DeMoisey", phone: "(865) 555-0134", email: "mark@denark.com", confidence: "High" }, source: "kgis.org", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-knx-002", permitNumber: "BP-2026-0573", address: "300 S Gay St", city: "Knoxville", state: "TN", zip: "37902", latitude: 35.9637, longitude: -83.9199, filingDate: daysAgo(7), description: "Interior tenant build-out for downtown restaurant with kitchen exhaust.", estimatedValue: 1200000, status: "Under Review", trades: ["HVAC", "Plumbing", "Electrical"], gcContact: { companyName: "Blaine Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "kgis.org", sourceUpdatedAt: daysAgo(6) },
-  { id: "p-knx-003", permitNumber: "BP-2025-0962", address: "7600 Kingston Pike", city: "Knoxville", state: "TN", zip: "37919", latitude: 35.9274, longitude: -84.0389, filingDate: daysAgo(12), description: "Roofing replacement for commercial strip mall.", estimatedValue: 520000, status: "Approved", trades: ["Roofing"], gcContact: { companyName: "Merit Construction", contactName: "David Merit", phone: "(865) 555-0289", email: "dmerit@meritconstruction.com", confidence: "High" }, source: "kgis.org", sourceUpdatedAt: daysAgo(11) },
-];
-
-const CHA_PERMITS: Permit[] = [
-  { id: "p-cha-001", permitNumber: "CHA-2026-0145", address: "100 Market St", city: "Chattanooga", state: "TN", zip: "37402", latitude: 35.0456, longitude: -85.3107, filingDate: daysAgo(3), description: "New commercial retail building in downtown district.", estimatedValue: 4200000, status: "Issued", trades: ["Concrete", "Structural Steel", "General Construction"], gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" }, source: "data.chattanooga.gov", sourceUpdatedAt: daysAgo(2) },
-  { id: "p-cha-002", permitNumber: "CHA-2026-0198", address: "5764 Highway 153", city: "Chattanooga", state: "TN", zip: "37343", latitude: 35.1122, longitude: -85.2245, filingDate: daysAgo(7), description: "Commercial office building addition with HVAC upgrade.", estimatedValue: 1800000, status: "Under Review", trades: ["HVAC", "General Construction"], gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" }, source: "data.chattanooga.gov", sourceUpdatedAt: daysAgo(6) },
-  { id: "p-cha-003", permitNumber: "CHA-2026-0112", address: "2020 Hamilton Place Blvd", city: "Chattanooga", state: "TN", zip: "37421", latitude: 35.0362, longitude: -85.1589, filingDate: daysAgo(11), description: "Electrical service upgrade for commercial shopping center.", estimatedValue: 650000, status: "Approved", trades: ["Electrical"], gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" }, source: "data.chattanooga.gov", sourceUpdatedAt: daysAgo(10) },
-];
-
-const ANA_PERMITS: Permit[] = [
-  { id: "p-ana-001", permitNumber: "BLD2026-03526", address: "1313 S Harbor Blvd", city: "Anaheim", state: "CA", zip: "92802", latitude: 33.8109, longitude: -117.9189, filingDate: daysAgo(3), description: "Commercial tenant improvement for new restaurant space with kitchen hood.", estimatedValue: 850000, status: "Issued", trades: ["HVAC", "Plumbing", "Electrical"], gcContact: { companyName: "Tilden-Coil Constructors", contactName: "Mike Coil", phone: "(714) 555-0122", email: "mcoil@tildencoil.com", confidence: "High" }, source: "anaheim.gov", sourceUpdatedAt: daysAgo(2) },
-  { id: "p-ana-002", permitNumber: "BLD2026-03643", address: "200 W Center St Promenade", city: "Anaheim", state: "CA", zip: "92805", latitude: 33.8353, longitude: -117.9145, filingDate: daysAgo(6), description: "New commercial retail building shell and core construction.", estimatedValue: 5200000, status: "Under Review", trades: ["Structural Steel", "Concrete", "General Construction"], gcContact: { companyName: "Snyder Langston", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "anaheim.gov", sourceUpdatedAt: daysAgo(5) },
-  { id: "p-ana-003", permitNumber: "BLD2026-03412", address: "1600 S Disneyland Dr", city: "Anaheim", state: "CA", zip: "92802", latitude: 33.8085, longitude: -117.9228, filingDate: daysAgo(10), description: "Fire sprinkler system upgrade for commercial entertainment venue.", estimatedValue: 1400000, status: "Approved", trades: ["Fire Suppression", "Plumbing"], gcContact: { companyName: "PCL Construction", contactName: "Sarah Chen", phone: "(714) 555-0289", email: "schen@pcl.com", confidence: "High" }, source: "anaheim.gov", sourceUpdatedAt: daysAgo(9) },
-];
-
-const STP_PERMITS: Permit[] = [
-  { id: "p-stp-001", permitNumber: "21-5000890", address: "100 2nd Ave NE", city: "St. Petersburg", state: "FL", zip: "33701", latitude: 27.7715, longitude: -82.6342, filingDate: daysAgo(2), description: "Interior renovation of ground-floor commercial office space.", estimatedValue: 720000, status: "Issued", trades: ["Electrical", "General Construction"], gcContact: { companyName: "Hardin Construction", contactName: "James Hardin", phone: "(727) 555-0134", email: "jhardin@hardinconstruction.com", confidence: "High" }, source: "egis.stpete.org", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-stp-002", permitNumber: "21-5001245", address: "600 1st Ave S", city: "St. Petersburg", state: "FL", zip: "33701", latitude: 27.7663, longitude: -82.6377, filingDate: daysAgo(5), description: "New HVAC installation for commercial retail building.", estimatedValue: 2100000, status: "Under Review", trades: ["HVAC", "Electrical"], gcContact: { companyName: "Ajax Building Corp", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "egis.stpete.org", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-stp-003", permitNumber: "21-5000456", address: "330 3rd St S", city: "St. Petersburg", state: "FL", zip: "33701", latitude: 27.7685, longitude: -82.6408, filingDate: daysAgo(8), description: "Glass storefront replacement for downtown commercial building.", estimatedValue: 380000, status: "Approved", trades: ["Glass & Glazing"], gcContact: { companyName: "Batson-Cook Construction", contactName: "Kelly Batson", phone: "(727) 555-0267", email: "kbatson@batsoncook.com", confidence: "High" }, source: "egis.stpete.org", sourceUpdatedAt: daysAgo(7) },
-];
-
-const AUR_PERMITS: Permit[] = [
-  { id: "p-aur-001", permitNumber: "26-2575300-000-00", address: "2051 S Langdale St", city: "Aurora", state: "CO", zip: "80013", latitude: 39.6779, longitude: -104.8072, filingDate: daysAgo(2), description: "Commercial building new construction - storage use building.", estimatedValue: 3500000, status: "Issued", trades: ["Concrete", "Structural Steel"], gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" }, source: "data.auroragov.org", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-aur-002", permitNumber: "26-2581400-000-00", address: "14200 E Alameda Ave", city: "Aurora", state: "CO", zip: "80012", latitude: 39.7116, longitude: -104.8247, filingDate: daysAgo(6), description: "Tenant finish for medical office suite including plumbing and electrical.", estimatedValue: 890000, status: "Under Review", trades: ["Plumbing", "Electrical", "General Construction"], gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" }, source: "data.auroragov.org", sourceUpdatedAt: daysAgo(5) },
-  { id: "p-aur-003", permitNumber: "26-2569100-000-00", address: "6000 S Gun Club Rd", city: "Aurora", state: "CO", zip: "80016", latitude: 39.6383, longitude: -104.7529, filingDate: daysAgo(9), description: "New commercial retail building with rooftop HVAC units.", estimatedValue: 6200000, status: "Approved", trades: ["HVAC", "Roofing", "General Construction"], gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" }, source: "data.auroragov.org", sourceUpdatedAt: daysAgo(8) },
-];
-
-const JAX_PERMITS: Permit[] = [
-  { id: "p-jax-001", permitNumber: "B-26-112345.000", address: "9824 Atlantic Blvd", city: "Jacksonville", state: "FL", zip: "32225", latitude: 30.3256, longitude: -81.5544, filingDate: daysAgo(2), description: "Tenant interior build-out for new restaurant space including kitchen hood and grease trap.", estimatedValue: 1100000, status: "Issued", trades: ["Plumbing", "HVAC", "Electrical"], gcContact: { companyName: "Onyx Creative", contactName: "Chris Harper", phone: "(904) 555-0134", email: "charper@onyxcreative.com", confidence: "High" }, source: "maps.coj.net", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-jax-002", permitNumber: "B-26-118790.000", address: "4500 San Pablo Rd S", city: "Jacksonville", state: "FL", zip: "32224", latitude: 30.2712, longitude: -81.4512, filingDate: daysAgo(5), description: "New commercial shell building for medical office complex.", estimatedValue: 8500000, status: "Under Review", trades: ["Structural Steel", "Concrete", "General Construction"], gcContact: { companyName: "Danis Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "maps.coj.net", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-jax-003", permitNumber: "B-26-105678.000", address: "1 Independent Dr", city: "Jacksonville", state: "FL", zip: "32202", latitude: 30.3240, longitude: -81.6371, filingDate: daysAgo(8), description: "Roofing replacement and fire suppression upgrade for downtown office tower.", estimatedValue: 2300000, status: "Approved", trades: ["Roofing", "Fire Suppression"], gcContact: { companyName: "Perry-McCall Construction", contactName: "Dan Perry", phone: "(904) 555-0267", email: "dperry@perrymccall.com", confidence: "High" }, source: "maps.coj.net", sourceUpdatedAt: daysAgo(7) },
-];
-
-const LNK_PERMITS: Permit[] = [
-  { id: "p-lnk-001", permitNumber: "BLD-2026-04521", address: "2901 S 84th St", city: "Lincoln", state: "NE", zip: "68506", latitude: 40.7878, longitude: -96.6396, filingDate: daysAgo(3), description: "New commercial retail building with HVAC rooftop units and electrical service.", estimatedValue: 3200000, status: "Issued", trades: ["HVAC", "Electrical", "General Construction"], gcContact: { companyName: "Hampton Enterprises", contactName: "Scott Hampton", phone: "(402) 555-0188", email: "shampton@hampton-ent.com", confidence: "High" }, source: "gis.lincoln.ne.gov", sourceUpdatedAt: daysAgo(2) },
-  { id: "p-lnk-002", permitNumber: "BLD-2026-04633", address: "6800 Telluride Dr", city: "Lincoln", state: "NE", zip: "68521", latitude: 40.8534, longitude: -96.7541, filingDate: daysAgo(6), description: "New medical office building with plumbing rough-in and fire suppression.", estimatedValue: 5800000, status: "Under Review", trades: ["Plumbing", "Fire Suppression", "Concrete"], gcContact: { companyName: "Sampson Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "gis.lincoln.ne.gov", sourceUpdatedAt: daysAgo(5) },
-  { id: "p-lnk-003", permitNumber: "BLD-2026-04712", address: "200 N 11th St", city: "Lincoln", state: "NE", zip: "68508", latitude: 40.8150, longitude: -96.7012, filingDate: daysAgo(10), description: "Interior tenant improvement for downtown office space including new glass storefront.", estimatedValue: 890000, status: "Approved", trades: ["Glass & Glazing", "General Construction"], gcContact: { companyName: "BD Construction", contactName: "Brian Daniels", phone: "(402) 555-0245", email: "bdaniels@bdconst.com", confidence: "High" }, source: "gis.lincoln.ne.gov", sourceUpdatedAt: daysAgo(9) },
-];
-
-const HND_PERMITS: Permit[] = [
-  { id: "p-hnd-001", permitNumber: "BLDG-COM-2026-5521", address: "1500 W Horizon Ridge Pkwy", city: "Henderson", state: "NV", zip: "89012", latitude: 36.0130, longitude: -115.0586, filingDate: daysAgo(2), description: "New commercial building shell for retail center with structural steel framing.", estimatedValue: 6200000, status: "Issued", trades: ["Structural Steel", "Concrete", "General Construction"], gcContact: { companyName: "Martin-Harris Construction", contactName: "Jeff Harris", phone: "(702) 555-0311", email: "jharris@martinharris.com", confidence: "High" }, source: "maps.cityofhenderson.com", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-hnd-002", permitNumber: "BLDG-COM-2026-5634", address: "2525 St Rose Pkwy", city: "Henderson", state: "NV", zip: "89074", latitude: 36.0248, longitude: -115.0932, filingDate: daysAgo(5), description: "Office building HVAC system replacement with new rooftop units.", estimatedValue: 980000, status: "Approved", trades: ["HVAC", "Electrical"], gcContact: { companyName: "Ledcor Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "maps.cityofhenderson.com", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-hnd-003", permitNumber: "BLDG-IND-2026-5789", address: "7900 Eastgate Rd", city: "Henderson", state: "NV", zip: "89011", latitude: 36.0564, longitude: -114.9614, filingDate: daysAgo(9), description: "Industrial warehouse expansion with new fire suppression sprinkler system.", estimatedValue: 4100000, status: "Under Review", trades: ["Fire Suppression", "General Construction"], gcContact: { companyName: "Clark & Sullivan Builders", contactName: "Tom Clark", phone: "(702) 555-0478", email: "tclark@clarksullivan.com", confidence: "High" }, source: "maps.cityofhenderson.com", sourceUpdatedAt: daysAgo(8) },
-];
-
-const SCO_PERMITS: Permit[] = [
-  { id: "p-sco-001", permitNumber: "BP-2026-031456", address: "15220 N Scottsdale Rd", city: "Scottsdale", state: "AZ", zip: "85254", latitude: 33.6172, longitude: -111.9261, filingDate: daysAgo(1), description: "Commercial new build for mixed-use retail and office space with full electrical.", estimatedValue: 9200000, status: "Issued", trades: ["Electrical", "General Construction", "Concrete"], gcContact: { companyName: "Sunbelt Holdings", contactName: "Mark Dawson", phone: "(480) 555-0199", email: "mdawson@sunbeltaz.com", confidence: "High" }, source: "maps.scottsdaleaz.gov", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-sco-002", permitNumber: "BP-2026-031589", address: "7135 E Camelback Rd", city: "Scottsdale", state: "AZ", zip: "85251", latitude: 33.5092, longitude: -111.9192, filingDate: daysAgo(4), description: "Tenant improvement for restaurant build-out with commercial plumbing and hood installation.", estimatedValue: 1750000, status: "Under Review", trades: ["Plumbing", "HVAC", "General Construction"], gcContact: { companyName: "Wespac Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "maps.scottsdaleaz.gov", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-sco-003", permitNumber: "BP-2026-031678", address: "8787 E Frank Lloyd Wright Blvd", city: "Scottsdale", state: "AZ", zip: "85260", latitude: 33.6098, longitude: -111.8654, filingDate: daysAgo(7), description: "Re-roofing and waterproofing of commercial office complex.", estimatedValue: 620000, status: "Approved", trades: ["Roofing"], gcContact: { companyName: "Willmeng Construction", contactName: "Rick Willmeng", phone: "(480) 555-0367", email: "rwillmeng@willmeng.com", confidence: "High" }, source: "maps.scottsdaleaz.gov", sourceUpdatedAt: daysAgo(6) },
-];
-
-const GLB_PERMITS: Permit[] = [
-  { id: "p-glb-001", permitNumber: "BLDG-2026-07834", address: "3510 S Val Vista Dr", city: "Gilbert", state: "AZ", zip: "85297", latitude: 33.3122, longitude: -111.7520, filingDate: daysAgo(3), description: "New commercial building for auto service center with concrete slab and electrical.", estimatedValue: 2800000, status: "Issued", trades: ["Concrete", "Electrical", "General Construction"], gcContact: { companyName: "Haydon Building Corp", contactName: "Jeff Haydon", phone: "(480) 555-0254", email: "jhaydon@haydonbc.com", confidence: "High" }, source: "maps.gilbertaz.gov", sourceUpdatedAt: daysAgo(2) },
-  { id: "p-glb-002", permitNumber: "BLDG-2026-07912", address: "1955 E Williams Field Rd", city: "Gilbert", state: "AZ", zip: "85295", latitude: 33.3083, longitude: -111.7743, filingDate: daysAgo(6), description: "Shell building for medical office complex with fire suppression and HVAC.", estimatedValue: 7400000, status: "Under Review", trades: ["Fire Suppression", "HVAC", "Structural Steel"], gcContact: { companyName: "Layton Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "maps.gilbertaz.gov", sourceUpdatedAt: daysAgo(5) },
-  { id: "p-glb-003", permitNumber: "BLDG-2026-08001", address: "3875 E Baseline Rd", city: "Gilbert", state: "AZ", zip: "85234", latitude: 33.3784, longitude: -111.7284, filingDate: daysAgo(11), description: "Demolition of existing retail and new construction for mixed-use development.", estimatedValue: 12500000, status: "Approved", trades: ["Demolition", "General Construction"], gcContact: { companyName: "Ryan Companies", contactName: "Ben Anderson", phone: "(480) 555-0445", email: "banderson@ryancos.com", confidence: "High" }, source: "maps.gilbertaz.gov", sourceUpdatedAt: daysAgo(10) },
-];
-
-const CHD_PERMITS: Permit[] = [
-  { id: "p-chd-001", permitNumber: "CDB-2026-04521", address: "3225 W Chandler Blvd", city: "Chandler", state: "AZ", zip: "85226", latitude: 33.3042, longitude: -111.8725, filingDate: daysAgo(2), description: "New commercial data center facility with full electrical and HVAC systems.", estimatedValue: 45000000, status: "Issued", trades: ["Electrical", "HVAC", "Concrete"], gcContact: { companyName: "DPR Construction", contactName: "Michael Torres", phone: "(480) 555-0521", email: "mtorres@dpr.com", confidence: "High" }, source: "gis.chandleraz.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-chd-002", permitNumber: "CDB-2026-04678", address: "1175 W Queen Creek Rd", city: "Chandler", state: "AZ", zip: "85248", latitude: 33.2567, longitude: -111.8501, filingDate: daysAgo(5), description: "Tenant improvement for medical office suite with plumbing and fire suppression.", estimatedValue: 1850000, status: "Under Review", trades: ["Plumbing", "Fire Suppression", "General Construction"], gcContact: { companyName: "Kitchell Contractors", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "gis.chandleraz.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-chd-003", permitNumber: "CDB-2026-04789", address: "2800 S Arizona Ave", city: "Chandler", state: "AZ", zip: "85286", latitude: 33.2898, longitude: -111.8413, filingDate: daysAgo(8), description: "New retail center structural steel and glass storefront installation.", estimatedValue: 5600000, status: "Approved", trades: ["Structural Steel", "Glass & Glazing"], gcContact: { companyName: "Okland Construction", contactName: "Steve Okland", phone: "(480) 555-0634", email: "sokland@okland.com", confidence: "High" }, source: "gis.chandleraz.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const TMP_PERMITS: Permit[] = [
-  { id: "p-tmp-001", permitNumber: "UF260234", address: "2000 E Rio Salado Pkwy", city: "Tempe", state: "AZ", zip: "85281", latitude: 33.4305, longitude: -111.9093, filingDate: daysAgo(2), description: "New commercial office building with full HVAC and electrical systems.", estimatedValue: 8500000, status: "Issued", trades: ["HVAC", "Electrical", "General Construction"], gcContact: { companyName: "Sundt Construction", contactName: "Mike Sundt", phone: "(480) 555-0722", email: "msundt@sundt.com", confidence: "High" }, source: "data.tempe.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-tmp-002", permitNumber: "UF260301", address: "925 S 52nd St", city: "Tempe", state: "AZ", zip: "85281", latitude: 33.4142, longitude: -111.8984, filingDate: daysAgo(5), description: "Tenant improvement for co-working space with plumbing and fire suppression.", estimatedValue: 1200000, status: "Under Review", trades: ["Plumbing", "Fire Suppression", "General Construction"], gcContact: { companyName: "Chasse Building Team", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.tempe.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-tmp-003", permitNumber: "UF260389", address: "1301 W University Dr", city: "Tempe", state: "AZ", zip: "85281", latitude: 33.4218, longitude: -111.9530, filingDate: daysAgo(8), description: "Commercial roofing replacement and structural steel reinforcement.", estimatedValue: 750000, status: "Approved", trades: ["Roofing", "Structural Steel"], gcContact: { companyName: "McCarthy Building Companies", contactName: "Dave McCarthy", phone: "(480) 555-0856", email: "dmccarthy@mccarthy.com", confidence: "High" }, source: "data.tempe.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const TLH_PERMITS: Permit[] = [
-  { id: "p-tlh-001", permitNumber: "BP-2026-03456", address: "1700 N Monroe St", city: "Tallahassee", state: "FL", zip: "32303", latitude: 30.4583, longitude: -84.2807, filingDate: daysAgo(1), description: "New commercial medical office building with full plumbing and electrical.", estimatedValue: 6800000, status: "Issued", trades: ["Plumbing", "Electrical", "General Construction"], gcContact: { companyName: "Childers Construction", contactName: "Tom Childers", phone: "(850) 555-0134", email: "tchilders@childersconst.com", confidence: "High" }, source: "leoncountyfl.gov", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-tlh-002", permitNumber: "BP-2026-03567", address: "2700 Blair Stone Rd", city: "Tallahassee", state: "FL", zip: "32301", latitude: 30.4357, longitude: -84.2447, filingDate: daysAgo(4), description: "Fire suppression sprinkler system installation for state office building.", estimatedValue: 890000, status: "Under Review", trades: ["Fire Suppression"], gcContact: { companyName: "Ajax Building Company", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "leoncountyfl.gov", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-tlh-003", permitNumber: "BP-2026-03678", address: "3221 Capital Circle NE", city: "Tallahassee", state: "FL", zip: "32308", latitude: 30.4712, longitude: -84.2341, filingDate: daysAgo(7), description: "Concrete foundation and structural steel for new retail shopping center.", estimatedValue: 15200000, status: "Approved", trades: ["Concrete", "Structural Steel", "General Construction"], gcContact: { companyName: "Brasfield & Gorrie", contactName: "Mark Gorrie", phone: "(850) 555-0289", email: "mgorrie@bfrg.com", confidence: "High" }, source: "leoncountyfl.gov", sourceUpdatedAt: daysAgo(6) },
-];
-
-const FTL_PERMITS: Permit[] = [
-  { id: "p-ftl-001", permitNumber: "BLD-COM-2026-4521", address: "100 E Broward Blvd", city: "Fort Lauderdale", state: "FL", zip: "33301", latitude: 26.1224, longitude: -80.1428, filingDate: daysAgo(1), description: "New commercial office tower with structural steel and glass curtain wall.", estimatedValue: 28000000, status: "Issued", trades: ["Structural Steel", "Glass & Glazing", "Electrical"], gcContact: { companyName: "Suffolk Construction", contactName: "John Fish", phone: "(954) 555-0188", email: "jfish@suffolk.com", confidence: "High" }, source: "gis.fortlauderdale.gov", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-ftl-002", permitNumber: "PLB-COM-2026-3289", address: "2601 E Oakland Park Blvd", city: "Fort Lauderdale", state: "FL", zip: "33306", latitude: 26.1664, longitude: -80.1120, filingDate: daysAgo(4), description: "Commercial plumbing rough-in for new restaurant with grease trap.", estimatedValue: 450000, status: "Under Review", trades: ["Plumbing"], gcContact: { companyName: "Moss Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "gis.fortlauderdale.gov", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-ftl-003", permitNumber: "MEC-COM-2026-2156", address: "1850 SE 17th St", city: "Fort Lauderdale", state: "FL", zip: "33316", latitude: 26.0971, longitude: -80.1185, filingDate: daysAgo(7), description: "HVAC system replacement for waterfront hotel including rooftop units.", estimatedValue: 1800000, status: "Approved", trades: ["HVAC", "Electrical"], gcContact: { companyName: "Current Builders", contactName: "Mike Current", phone: "(954) 555-0345", email: "mcurrent@currentbuilders.com", confidence: "High" }, source: "gis.fortlauderdale.gov", sourceUpdatedAt: daysAgo(6) },
-];
-
-const OPK_PERMITS: Permit[] = [
-  { id: "p-opk-001", permitNumber: "BLD-C-2026-02345", address: "7101 College Blvd", city: "Overland Park", state: "KS", zip: "66210", latitude: 38.9348, longitude: -94.6673, filingDate: daysAgo(2), description: "New commercial retail building with concrete slab foundation.", estimatedValue: 4200000, status: "Issued", trades: ["Concrete", "General Construction"], gcContact: { companyName: "JE Dunn Construction", contactName: "Terry Dunn", phone: "(913) 555-0234", email: "tdunn@jedunn.com", confidence: "High" }, source: "maps.opkansas.org", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-opk-002", permitNumber: "BLD-C-2026-02456", address: "11901 Metcalf Ave", city: "Overland Park", state: "KS", zip: "66213", latitude: 38.8912, longitude: -94.6672, filingDate: daysAgo(5), description: "Tenant improvement for medical office with plumbing and fire suppression.", estimatedValue: 980000, status: "Under Review", trades: ["Plumbing", "Fire Suppression", "General Construction"], gcContact: { companyName: "Crossland Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "maps.opkansas.org", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-opk-003", permitNumber: "BLD-C-2026-02567", address: "6700 W 95th St", city: "Overland Park", state: "KS", zip: "66212", latitude: 38.9472, longitude: -94.7003, filingDate: daysAgo(9), description: "Re-roofing of commercial warehouse and new electrical panel upgrade.", estimatedValue: 520000, status: "Approved", trades: ["Roofing", "Electrical"], gcContact: { companyName: "McCownGordon Construction", contactName: "Brett Gordon", phone: "(913) 555-0478", email: "bgordon@mccowngordon.com", confidence: "High" }, source: "maps.opkansas.org", sourceUpdatedAt: daysAgo(8) },
-];
-
-const SLC_PERMITS: Permit[] = [
-  { id: "p-slc-001", permitNumber: "BLD2026-01234", address: "777 N 5600 W", city: "Salt Lake City", state: "UT", zip: "84116", latitude: 40.7855, longitude: -111.9761, filingDate: daysAgo(1), description: "Commercial warehouse pallet racking installation with fire sprinkler modifications.", estimatedValue: 663000, status: "Issued", trades: ["Fire Suppression", "General Construction"], gcContact: { companyName: "Baker Brothers Installations", contactName: "Clevon Nicholson", phone: "(801) 555-0192", email: "cnicholson@bakerbrothers.com", confidence: "High" }, source: "maps.slc.gov", sourceUpdatedAt: daysAgo(0) },
-  { id: "p-slc-002", permitNumber: "BLD2026-01345", address: "150 S State St", city: "Salt Lake City", state: "UT", zip: "84111", latitude: 40.7628, longitude: -111.8889, filingDate: daysAgo(4), description: "Tenant improvement for commercial office with HVAC and electrical upgrades.", estimatedValue: 1250000, status: "Under Review", trades: ["HVAC", "Electrical", "General Construction"], gcContact: { companyName: "Okland Construction", contactName: null, phone: "(801) 555-0344", email: null, confidence: "Medium" }, source: "maps.slc.gov", sourceUpdatedAt: daysAgo(3) },
-  { id: "p-slc-003", permitNumber: "BLD2026-01456", address: "2100 S 900 E", city: "Salt Lake City", state: "UT", zip: "84106", latitude: 40.7277, longitude: -111.8622, filingDate: daysAgo(8), description: "New commercial restaurant with plumbing, concrete foundation, and glass storefront.", estimatedValue: 2100000, status: "Approved", trades: ["Plumbing", "Concrete", "Glass & Glazing"], gcContact: { companyName: "Jacobsen Construction", contactName: "Scott Jacobsen", phone: "(801) 555-0567", email: "sjacobsen@jacobsenconstruction.com", confidence: "High" }, source: "maps.slc.gov", sourceUpdatedAt: daysAgo(7) },
-];
-
-const PEO_PERMITS: Permit[] = [
-  { id: "p-peo-001", permitNumber: "2600535", address: "9380 W Northern Ave", city: "Peoria", state: "AZ", zip: "85345", latitude: 33.5878, longitude: -112.2512, filingDate: daysAgo(2), description: "Installation of EV charging stations and associated electrical equipment.", estimatedValue: 420000, status: "Issued", trades: ["Electrical"], gcContact: { companyName: "GPD Group", contactName: "Benjamin Dalton", phone: "(623) 555-0192", email: "bdalton@gpdgroup.com", confidence: "High" }, source: "gis.peoriaaz.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-peo-002", permitNumber: "2600601", address: "8295 W Thunderbird Rd", city: "Peoria", state: "AZ", zip: "85381", latitude: 33.6117, longitude: -112.2374, filingDate: daysAgo(6), description: "Commercial tenant improvement with HVAC rooftop unit replacement and plumbing.", estimatedValue: 890000, status: "Under Review", trades: ["HVAC", "Plumbing", "General Construction"], gcContact: { companyName: "Haydon Building Corp", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "gis.peoriaaz.gov", sourceUpdatedAt: daysAgo(5) },
-  { id: "p-peo-003", permitNumber: "2600723", address: "16222 N 83rd Ave", city: "Peoria", state: "AZ", zip: "85382", latitude: 33.6285, longitude: -112.2337, filingDate: daysAgo(10), description: "New commercial warehouse with concrete foundation and fire suppression.", estimatedValue: 3100000, status: "Approved", trades: ["Concrete", "Fire Suppression", "General Construction"], gcContact: { companyName: "Layton Construction", contactName: "Mike Layton", phone: "(623) 555-0378", email: "mlayton@laytonconstruction.com", confidence: "High" }, source: "gis.peoriaaz.gov", sourceUpdatedAt: daysAgo(9) },
-];
-
-const SAV_PERMITS: Permit[] = [
-  { id: "p-sav-001", permitNumber: "26-04500-BC", address: "215 W Liberty St", city: "Savannah", state: "GA", zip: "31401", latitude: 32.0775, longitude: -81.0960, filingDate: daysAgo(2), description: "Commercial renovation of historic building with HVAC and electrical upgrades.", estimatedValue: 1200000, status: "Issued", trades: ["HVAC", "Electrical", "General Construction"], gcContact: { companyName: "Choate Construction", contactName: "Jason Choate", phone: "(912) 555-0198", email: "jchoate@choateco.com", confidence: "High" }, source: "pub.sagis.org", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-sav-002", permitNumber: "26-04612-BC", address: "100 Bull St", city: "Savannah", state: "GA", zip: "31401", latitude: 32.0809, longitude: -81.0930, filingDate: daysAgo(5), description: "New commercial restaurant with fire suppression and plumbing.", estimatedValue: 680000, status: "Under Review", trades: ["Fire Suppression", "Plumbing", "General Construction"], gcContact: { companyName: "Hussey Gay Bell", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "pub.sagis.org", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-sav-003", permitNumber: "26-04700-BC", address: "302 E Broughton St", city: "Savannah", state: "GA", zip: "31401", latitude: 32.0798, longitude: -81.0885, filingDate: daysAgo(9), description: "TPO roofing replacement on commercial office building.", estimatedValue: 340000, status: "Approved", trades: ["Roofing"], gcContact: { companyName: "Pinyan Construction", contactName: "Mark Pinyan", phone: "(912) 555-0367", email: "mpinyan@pinyanconstruction.com", confidence: "High" }, source: "pub.sagis.org", sourceUpdatedAt: daysAgo(8) },
-];
-
-const CRY_PERMITS: Permit[] = [
-  { id: "p-cry-001", permitNumber: "26-00012345", address: "1255 NW Maynard Rd", city: "Cary", state: "NC", zip: "27513", latitude: 35.8017, longitude: -78.7923, filingDate: daysAgo(3), description: "Commercial tenant improvement for office space with electrical and HVAC.", estimatedValue: 520000, status: "Issued", trades: ["Electrical", "HVAC", "General Construction"], gcContact: { companyName: "Clancy & Theys", contactName: "Jim Theys", phone: "(919) 555-0234", email: "jtheys@clancytheys.com", confidence: "High" }, source: "data.townofcary.org", sourceUpdatedAt: daysAgo(2) },
-  { id: "p-cry-002", permitNumber: "26-00012456", address: "200 Ashville Ave", city: "Cary", state: "NC", zip: "27518", latitude: 35.7655, longitude: -78.7782, filingDate: daysAgo(7), description: "New commercial retail building with concrete foundation and structural steel.", estimatedValue: 3800000, status: "Under Review", trades: ["Concrete", "Structural Steel", "General Construction"], gcContact: { companyName: "Barnhill Contracting", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.townofcary.org", sourceUpdatedAt: daysAgo(6) },
-  { id: "p-cry-003", permitNumber: "26-00012567", address: "2000 Regency Pkwy", city: "Cary", state: "NC", zip: "27518", latitude: 35.7812, longitude: -78.7564, filingDate: daysAgo(11), description: "Fire suppression system upgrade for commercial warehouse.", estimatedValue: 210000, status: "Approved", trades: ["Fire Suppression"], gcContact: { companyName: "Shelco Inc", contactName: "Bob Shelton", phone: "(919) 555-0489", email: "bshelton@shelcoinc.com", confidence: "High" }, source: "data.townofcary.org", sourceUpdatedAt: daysAgo(10) },
-];
-
-const NFK_PERMITS: Permit[] = [
-  { id: "p-nfk-001", permitNumber: "B26-01234", address: "300 E Main St", city: "Norfolk", state: "VA", zip: "23510", latitude: 36.8468, longitude: -76.2852, filingDate: daysAgo(3), description: "New Commercial Building with HVAC and electrical systems.", estimatedValue: 5800000, status: "Issued", trades: ["HVAC", "Electrical", "General Construction"], gcContact: { companyName: "W.M. Jordan Company", contactName: "Bill Jordan", phone: "(757) 555-0198", email: "bjordan@wmjordan.com", confidence: "High" }, source: "data.norfolk.gov", sourceUpdatedAt: daysAgo(2) },
-  { id: "p-nfk-002", permitNumber: "B26-01345", address: "401 Monticello Ave", city: "Norfolk", state: "VA", zip: "23510", latitude: 36.8563, longitude: -76.2894, filingDate: daysAgo(6), description: "Alteration/Repair Commercial Building with plumbing upgrades.", estimatedValue: 420000, status: "Under Review", trades: ["Plumbing", "General Construction"], gcContact: { companyName: "Hourigan Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "data.norfolk.gov", sourceUpdatedAt: daysAgo(5) },
-  { id: "p-nfk-003", permitNumber: "M26-00567", address: "1500 Granby St", city: "Norfolk", state: "VA", zip: "23510", latitude: 36.8601, longitude: -76.2917, filingDate: daysAgo(10), description: "New Service Commercial Mechanical rooftop unit replacement.", estimatedValue: 180000, status: "Approved", trades: ["HVAC"], gcContact: { companyName: "Luck Stone Mechanical", contactName: "Tom Luck", phone: "(757) 555-0445", email: "tluck@luckstone.com", confidence: "High" }, source: "data.norfolk.gov", sourceUpdatedAt: daysAgo(9) },
-];
-
-const TAC_PERMITS: Permit[] = [
-  { id: "p-tac-001", permitNumber: "BLD26-0567", address: "1901 S Union Ave", city: "Tacoma", state: "WA", zip: "98405", latitude: 47.2401, longitude: -122.4557, filingDate: daysAgo(2), description: "New commercial mixed-use building with HVAC and fire suppression systems.", estimatedValue: 6200000, status: "Issued", trades: ["HVAC", "Fire Suppression", "General Construction"], gcContact: { companyName: "Absher Construction", contactName: "Tim Absher", phone: "(253) 555-0192", email: "tabsher@absherco.com", confidence: "High" }, source: "Tacoma Accela", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-tac-002", permitNumber: "BLD26-0678", address: "3602 Pacific Ave", city: "Tacoma", state: "WA", zip: "98418", latitude: 47.2307, longitude: -122.4448, filingDate: daysAgo(5), description: "Tenant improvement for restaurant with plumbing and electrical upgrades.", estimatedValue: 450000, status: "Under Review", trades: ["Plumbing", "Electrical", "General Construction"], gcContact: { companyName: "Korsmo Construction", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "Tacoma Accela", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-tac-003", permitNumber: "BLD26-0789", address: "2201 6th Ave", city: "Tacoma", state: "WA", zip: "98403", latitude: 47.2564, longitude: -122.4389, filingDate: daysAgo(8), description: "Commercial warehouse re-roofing with structural steel reinforcement.", estimatedValue: 890000, status: "Approved", trades: ["Roofing", "Structural Steel"], gcContact: { companyName: "Lease Crutcher Lewis", contactName: "Rick Lewis", phone: "(253) 555-0345", email: "rlewis@lewisbuilds.com", confidence: "High" }, source: "Tacoma Accela", sourceUpdatedAt: daysAgo(7) },
-];
-
-const FRS_PERMITS: Permit[] = [
-  { id: "p-frs-001", permitNumber: "B26-01234", address: "8840 4th St", city: "Frisco", state: "TX", zip: "75034", latitude: 33.1507, longitude: -96.8236, filingDate: daysAgo(3), description: "New commercial performance stage building with restrooms and HVAC.", estimatedValue: 3200000, status: "Issued", trades: ["HVAC", "Plumbing", "General Construction"], gcContact: { companyName: "Brasfield & Gorrie", contactName: "Kyle Gorrie", phone: "(972) 555-0198", email: "kgorrie@brasfieldgorrie.com", confidence: "High" }, source: "maps.friscotexas.gov", sourceUpdatedAt: daysAgo(2) },
-  { id: "p-frs-002", permitNumber: "B26-01345", address: "3401 Preston Rd", city: "Frisco", state: "TX", zip: "75034", latitude: 33.1312, longitude: -96.8038, filingDate: daysAgo(6), description: "Tenant improvement for retail storefront with electrical and fire suppression.", estimatedValue: 870000, status: "Under Review", trades: ["Electrical", "Fire Suppression", "General Construction"], gcContact: { companyName: "Balfour Beatty", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "maps.friscotexas.gov", sourceUpdatedAt: daysAgo(5) },
-  { id: "p-frs-003", permitNumber: "B26-01456", address: "5100 Warren Pkwy", city: "Frisco", state: "TX", zip: "75034", latitude: 33.1189, longitude: -96.8401, filingDate: daysAgo(11), description: "Commercial office building structural steel frame and concrete foundation.", estimatedValue: 5400000, status: "Approved", trades: ["Structural Steel", "Concrete"], gcContact: { companyName: "Austin Commercial", contactName: "Dan Reeves", phone: "(972) 555-0334", email: "dreeves@austincommercial.com", confidence: "High" }, source: "maps.friscotexas.gov", sourceUpdatedAt: daysAgo(10) },
-];
-
-const SXF_PERMITS: Permit[] = [
-  { id: "p-sxf-001", permitNumber: "CB-408200-2026", address: "4200 E Producer Ln", city: "Sioux Falls", state: "SD", zip: "57104", latitude: 43.5980, longitude: -96.6820, filingDate: daysAgo(2), description: "Remodel/Renovation of commercial office building with new HVAC units and electrical panel upgrades.", estimatedValue: 1250000, status: "Issued", trades: ["HVAC", "Electrical", "General Construction"], gcContact: { companyName: "Journey Group", contactName: "Mark Heine", phone: "(605) 555-0187", email: "mheine@journeygroup.com", confidence: "High" }, source: "gis.siouxfalls.gov", sourceUpdatedAt: daysAgo(1) },
-  { id: "p-sxf-002", permitNumber: "CB-407950-2026", address: "221 E 6th St", city: "Sioux Falls", state: "SD", zip: "57103", latitude: 43.5470, longitude: -96.7220, filingDate: daysAgo(5), description: "New commercial retail build-out with plumbing and fire suppression systems.", estimatedValue: 780000, status: "Under Review", trades: ["Plumbing", "Fire Suppression", "General Construction"], gcContact: { companyName: "Henry Carlson Company", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "gis.siouxfalls.gov", sourceUpdatedAt: daysAgo(4) },
-  { id: "p-sxf-003", permitNumber: "CB-406300-2026", address: "2230 S Marion Rd", city: "Sioux Falls", state: "SD", zip: "57106", latitude: 43.5280, longitude: -96.7940, filingDate: daysAgo(9), description: "Commercial warehouse roofing replacement and structural steel reinforcement.", estimatedValue: 508000, status: "Approved", trades: ["Roofing", "Structural Steel"], gcContact: { companyName: "Fiegen Construction", contactName: "Steve Fiegen", phone: "(605) 555-0221", email: "sfiegen@fiegenconstruction.com", confidence: "High" }, source: "gis.siouxfalls.gov", sourceUpdatedAt: daysAgo(8) },
-];
-
-const WLM_PERMITS: Permit[] = [
-  { id: "p-wlm-001", permitNumber: "26-00387", address: "14 Grace St", city: "Wilmington", state: "NC", zip: "28401", latitude: 34.2386, longitude: -77.9500, filingDate: daysAgo(3), description: "Remodel of commercial leasing office into community clubroom with new HVAC, plumbing rough-in, and interior framing.", estimatedValue: 76928, status: "Issued", trades: ["HVAC", "Plumbing", "General Construction"], gcContact: { companyName: "The Catamount Group LLC", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "gis.nhcgov.com", sourceUpdatedAt: daysAgo(2) },
-  { id: "p-wlm-002", permitNumber: "26-00244", address: "310 N College Rd", city: "Wilmington", state: "NC", zip: "28405", latitude: 34.2511, longitude: -77.8704, filingDate: daysAgo(6), description: "Corning HCF — 13,288 sq ft commercial renovation with electrical and fire suppression upgrades.", estimatedValue: 1227545, status: "Issued", trades: ["Electrical", "Fire Suppression", "General Construction"], gcContact: { companyName: "Industrial Turnaround Corporation", contactName: "Dan Hollar", phone: "(910) 555-0143", email: "dhollar@itcorp.com", confidence: "High" }, source: "gis.nhcgov.com", sourceUpdatedAt: daysAgo(5) },
-  { id: "p-wlm-003", permitNumber: "26-00064", address: "5675 Barbados Blvd", city: "Wilmington", state: "NC", zip: "28429", latitude: 34.3532, longitude: -77.8802, filingDate: daysAgo(10), description: "Construction of 7-Eleven convenience store — 5,373 sq ft new commercial building with concrete slab and structural steel.", estimatedValue: 470782, status: "Issued", trades: ["Concrete", "Structural Steel", "General Construction"], gcContact: { companyName: "C4 Builders LLC", contactName: null, phone: null, email: null, confidence: "Medium" }, source: "gis.nhcgov.com", sourceUpdatedAt: daysAgo(9) },
-];
-
-const CITY_TO_METRO: Record<string, string> = {
-  Chicago: "chicago",
-  Austin: "austin",
-  "San Francisco": "sf-bay-area",
-  Seattle: "seattle",
-  "New York": "new-york",
-  Philadelphia: "philadelphia",
-  Boston: "boston",
-  "Los Angeles": "los-angeles",
-  Nashville: "nashville",
-  "San Diego": "san-diego",
-  Denver: "denver",
-  Minneapolis: "minneapolis",
-  Washington: "washington-dc",
-  Portland: "portland",
-  Orlando: "orlando",
-  Columbus: "columbus",
-  "Fort Worth": "fort-worth",
-  "Las Vegas": "las-vegas",
-  Phoenix: "phoenix",
-  Raleigh: "raleigh",
-  Tampa: "tampa",
-  Cincinnati: "cincinnati",
-  "Baton Rouge": "baton-rouge",
-  Bethesda: "montgomery-county",
-  Rockville: "montgomery-county",
-  Mesa: "mesa",
-  "New Orleans": "new-orleans",
-  "Kansas City": "kansas-city",
-  Honolulu: "honolulu",
-  Largo: "prince-georges",
-  Greenbelt: "prince-georges",
-  Hyattsville: "prince-georges",
-  Louisville: "louisville",
-  Sacramento: "sacramento",
-  "San Antonio": "san-antonio",
-  Baltimore: "baltimore",
-  Miami: "miami",
-  Charlotte: "charlotte",
-  Detroit: "detroit",
-  Tucson: "tucson",
-  Atlanta: "atlanta",
-  Milwaukee: "milwaukee",
-  Albuquerque: "albuquerque",
-  "Virginia Beach": "virginia-beach",
-  "El Paso": "el-paso",
-  Memphis: "memphis",
-  Pittsburgh: "pittsburgh",
-  Durham: "durham",
-  Buffalo: "buffalo",
-  Wichita: "wichita",
-  Spokane: "spokane",
-  Charleston: "charleston",
-  Hartford: "hartford",
-  Cleveland: "cleveland",
-  "Colorado Springs": "colorado-springs",
-  Boise: "boise",
-  Greensboro: "greensboro",
-  Jacksonville: "jacksonville",
-  Anaheim: "anaheim",
-  "St. Petersburg": "st-petersburg",
-  Aurora: "aurora",
-  Chattanooga: "chattanooga",
-  Knoxville: "knoxville",
-  Lincoln: "lincoln",
-  Henderson: "henderson",
-  Scottsdale: "scottsdale",
-  Gilbert: "gilbert",
-  Chandler: "chandler",
-  Tempe: "tempe",
-  Tallahassee: "tallahassee",
-  "Fort Lauderdale": "fort-lauderdale",
-  "Overland Park": "overland-park",
-  Frisco: "frisco",
-  Tacoma: "tacoma",
-  Norfolk: "norfolk",
-  Savannah: "savannah",
-  Cary: "cary",
-  Peoria: "peoria",
-  "Salt Lake City": "salt-lake-city",
-  "Sioux Falls": "sioux-falls",
-  Wilmington: "wilmington",
-};
-
-const ALL_PERMITS: Permit[] = [
-  ...CHICAGO_PERMITS,
-  ...AUSTIN_PERMITS,
-  ...SF_PERMITS,
-  ...SEATTLE_PERMITS,
-  ...NYC_PERMITS,
-  ...PHILLY_PERMITS,
-  ...BOSTON_PERMITS,
-  ...LA_PERMITS,
-  ...NASHVILLE_PERMITS,
-  ...SD_PERMITS,
-  ...DENVER_PERMITS,
-  ...MPLS_PERMITS,
-  ...DC_PERMITS,
-  ...PDX_PERMITS,
-  ...ORLANDO_PERMITS,
-  ...COLUMBUS_PERMITS,
-  ...FW_PERMITS,
-  ...LV_PERMITS,
-  ...PHX_PERMITS,
-  ...RAL_PERMITS,
-  ...TAMPA_PERMITS,
-  ...CIN_PERMITS,
-  ...BTR_PERMITS,
-  ...MOCO_PERMITS,
-  ...MESA_PERMITS,
-  ...NOLA_PERMITS,
-  ...KC_PERMITS,
-  ...HNL_PERMITS,
-  ...PGC_PERMITS,
-  ...LOU_PERMITS,
-  ...SAC_PERMITS,
-  ...SA_PERMITS,
-  ...BAL_PERMITS,
-  ...MIA_PERMITS,
-  ...CLT_PERMITS,
-  ...DET_PERMITS,
-  ...TUC_PERMITS,
-  ...ATL_PERMITS,
-  ...MKE_PERMITS,
-  ...ABQ_PERMITS,
-  ...VB_PERMITS,
-  ...ELP_PERMITS,
-  ...MEM_PERMITS,
-  ...PGH_PERMITS,
-  ...DUR_PERMITS,
-  ...BUF_PERMITS,
-  ...WICH_PERMITS,
-  ...SPK_PERMITS,
-  ...CHS_PERMITS,
-  ...HTF_PERMITS,
-  ...CLE_PERMITS,
-  ...COS_PERMITS,
-  ...BOI_PERMITS,
-  ...GSO_PERMITS,
-  ...JAX_PERMITS,
-  ...ANA_PERMITS,
-  ...STP_PERMITS,
-  ...AUR_PERMITS,
-  ...CHA_PERMITS,
-  ...KNX_PERMITS,
-  ...LNK_PERMITS,
-  ...HND_PERMITS,
-  ...SCO_PERMITS,
-  ...GLB_PERMITS,
-  ...CHD_PERMITS,
-  ...TMP_PERMITS,
-  ...TLH_PERMITS,
-  ...FTL_PERMITS,
-  ...OPK_PERMITS,
-  ...SLC_PERMITS,
-  ...PEO_PERMITS,
-  ...SAV_PERMITS,
-  ...CRY_PERMITS,
-  ...NFK_PERMITS,
-  ...TAC_PERMITS,
-  ...FRS_PERMITS,
-  ...SXF_PERMITS,
-  ...WLM_PERMITS,
-];
+// ── deterministic seeded PRNG ─────────────────────────────────────────────────
+
+function hash(str: string): number {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) + h + str.charCodeAt(i)) & 0x7fffffff;
+  }
+  return h || 1;
+}
+
+class Rng {
+  private s: number;
+  constructor(seed: string) {
+    this.s = hash(seed);
+  }
+  next(): number {
+    this.s = (this.s * 1664525 + 1013904223) & 0x7fffffff;
+    return this.s / 0x7fffffff;
+  }
+  int(min: number, max: number): number {
+    return Math.floor(this.next() * (max - min + 1)) + min;
+  }
+  pick<T>(arr: readonly T[]): T {
+    return arr[this.int(0, arr.length - 1)];
+  }
+}
+
+// ── city metadata ─────────────────────────────────────────────────────────────
+
+interface CityMeta {
+  id: string;
+  name: string;
+  state: string;
+  zip: string;
+  lat: number;
+  lon: number;
+  areaCode: string;
+}
+
+const CITIES: CityMeta[] = [
+  // SF Bay Area
+  { id: "san-francisco", name: "San Francisco", state: "CA", zip: "94102", lat: 37.7749, lon: -122.4194, areaCode: "415" },
+  { id: "oakland", name: "Oakland", state: "CA", zip: "94612", lat: 37.8044, lon: -122.2712, areaCode: "510" },
+  { id: "berkeley", name: "Berkeley", state: "CA", zip: "94704", lat: 37.8716, lon: -122.2727, areaCode: "510" },
+  { id: "san-jose", name: "San Jose", state: "CA", zip: "95113", lat: 37.3382, lon: -121.8863, areaCode: "408" },
+  { id: "fremont", name: "Fremont", state: "CA", zip: "94538", lat: 37.5485, lon: -121.9886, areaCode: "510" },
+  { id: "hayward", name: "Hayward", state: "CA", zip: "94541", lat: 37.6688, lon: -122.0808, areaCode: "510" },
+  { id: "palo-alto", name: "Palo Alto", state: "CA", zip: "94301", lat: 37.4419, lon: -122.1430, areaCode: "650" },
+  { id: "redwood-city", name: "Redwood City", state: "CA", zip: "94063", lat: 37.4852, lon: -122.2364, areaCode: "650" },
+  { id: "mountain-view", name: "Mountain View", state: "CA", zip: "94041", lat: 37.3861, lon: -122.0839, areaCode: "650" },
+  { id: "sunnyvale", name: "Sunnyvale", state: "CA", zip: "94086", lat: 37.3688, lon: -122.0363, areaCode: "408" },
+  { id: "santa-clara", name: "Santa Clara", state: "CA", zip: "95050", lat: 37.3541, lon: -121.9552, areaCode: "408" },
+  { id: "walnut-creek", name: "Walnut Creek", state: "CA", zip: "94596", lat: 37.9101, lon: -122.0652, areaCode: "925" },
+  { id: "concord", name: "Concord", state: "CA", zip: "94520", lat: 37.9780, lon: -122.0311, areaCode: "925" },
+  { id: "san-mateo", name: "San Mateo", state: "CA", zip: "94401", lat: 37.5630, lon: -122.3255, areaCode: "650" },
+  { id: "richmond", name: "Richmond", state: "CA", zip: "94804", lat: 37.9358, lon: -122.3478, areaCode: "510" },
+  { id: "san-ramon", name: "San Ramon", state: "CA", zip: "94583", lat: 37.7799, lon: -121.9780, areaCode: "925" },
+  { id: "union-city", name: "Union City", state: "CA", zip: "94587", lat: 37.5934, lon: -122.0439, areaCode: "510" },
+  { id: "pleasanton", name: "Pleasanton", state: "CA", zip: "94566", lat: 37.6624, lon: -121.8747, areaCode: "925" },
+  { id: "daly-city", name: "Daly City", state: "CA", zip: "94015", lat: 37.6879, lon: -122.4702, areaCode: "650" },
+  // LA Metro
+  { id: "los-angeles", name: "Los Angeles", state: "CA", zip: "90012", lat: 34.0522, lon: -118.2437, areaCode: "213" },
+  { id: "long-beach", name: "Long Beach", state: "CA", zip: "90802", lat: 33.7701, lon: -118.1937, areaCode: "562" },
+  { id: "glendale", name: "Glendale", state: "CA", zip: "91205", lat: 34.1425, lon: -118.2551, areaCode: "818" },
+  { id: "pasadena", name: "Pasadena", state: "CA", zip: "91101", lat: 34.1478, lon: -118.1445, areaCode: "626" },
+  { id: "santa-monica", name: "Santa Monica", state: "CA", zip: "90401", lat: 34.0195, lon: -118.4912, areaCode: "310" },
+  { id: "burbank", name: "Burbank", state: "CA", zip: "91502", lat: 34.1808, lon: -118.3090, areaCode: "818" },
+  { id: "torrance", name: "Torrance", state: "CA", zip: "90503", lat: 33.8358, lon: -118.3406, areaCode: "310" },
+  { id: "inglewood", name: "Inglewood", state: "CA", zip: "90301", lat: 33.9617, lon: -118.3531, areaCode: "310" },
+  { id: "pomona", name: "Pomona", state: "CA", zip: "91766", lat: 34.0551, lon: -117.7500, areaCode: "909" },
+  { id: "el-monte", name: "El Monte", state: "CA", zip: "91731", lat: 34.0686, lon: -118.0276, areaCode: "626" },
+  { id: "downey", name: "Downey", state: "CA", zip: "90241", lat: 33.9401, lon: -118.1332, areaCode: "562" },
+  { id: "west-covina", name: "West Covina", state: "CA", zip: "91790", lat: 34.0686, lon: -117.9390, areaCode: "626" },
+  { id: "norwalk", name: "Norwalk", state: "CA", zip: "90650", lat: 33.9022, lon: -118.0818, areaCode: "562" },
+  { id: "anaheim", name: "Anaheim", state: "CA", zip: "92805", lat: 33.8366, lon: -117.9143, areaCode: "714" },
+  // NYC Metro
+  { id: "new-york", name: "New York", state: "NY", zip: "10001", lat: 40.7128, lon: -74.0060, areaCode: "212" },
+  { id: "yonkers", name: "Yonkers", state: "NY", zip: "10701", lat: 40.9312, lon: -73.8988, areaCode: "914" },
+  { id: "white-plains", name: "White Plains", state: "NY", zip: "10601", lat: 41.0340, lon: -73.7629, areaCode: "914" },
+  { id: "new-rochelle", name: "New Rochelle", state: "NY", zip: "10801", lat: 40.9115, lon: -73.7824, areaCode: "914" },
+  { id: "newark", name: "Newark", state: "NJ", zip: "07102", lat: 40.7357, lon: -74.1724, areaCode: "973" },
+  { id: "jersey-city", name: "Jersey City", state: "NJ", zip: "07302", lat: 40.7178, lon: -74.0431, areaCode: "201" },
+  { id: "paterson", name: "Paterson", state: "NJ", zip: "07501", lat: 40.9168, lon: -74.1718, areaCode: "973" },
+  { id: "elizabeth", name: "Elizabeth", state: "NJ", zip: "07201", lat: 40.6640, lon: -74.2107, areaCode: "908" },
+  { id: "hoboken", name: "Hoboken", state: "NJ", zip: "07030", lat: 40.7440, lon: -74.0324, areaCode: "201" },
+  // Chicago Metro
+  { id: "chicago", name: "Chicago", state: "IL", zip: "60601", lat: 41.8781, lon: -87.6298, areaCode: "312" },
+  { id: "evanston", name: "Evanston", state: "IL", zip: "60201", lat: 42.0451, lon: -87.6878, areaCode: "847" },
+  { id: "naperville", name: "Naperville", state: "IL", zip: "60540", lat: 41.7508, lon: -88.1535, areaCode: "630" },
+  { id: "joliet", name: "Joliet", state: "IL", zip: "60432", lat: 41.5250, lon: -88.0817, areaCode: "815" },
+  { id: "schaumburg", name: "Schaumburg", state: "IL", zip: "60173", lat: 42.0334, lon: -88.0834, areaCode: "847" },
+  { id: "arlington-heights", name: "Arlington Heights", state: "IL", zip: "60004", lat: 42.0884, lon: -87.9806, areaCode: "847" },
+  { id: "oak-park", name: "Oak Park", state: "IL", zip: "60302", lat: 41.8850, lon: -87.7845, areaCode: "708" },
+  { id: "cicero", name: "Cicero", state: "IL", zip: "60804", lat: 41.8456, lon: -87.7539, areaCode: "708" },
+  { id: "elgin", name: "Elgin", state: "IL", zip: "60120", lat: 42.0354, lon: -88.2826, areaCode: "847" },
+  // Dallas-Fort Worth
+  { id: "dallas", name: "Dallas", state: "TX", zip: "75201", lat: 32.7767, lon: -96.7970, areaCode: "214" },
+  { id: "fort-worth", name: "Fort Worth", state: "TX", zip: "76102", lat: 32.7555, lon: -97.3308, areaCode: "817" },
+  { id: "arlington-tx", name: "Arlington", state: "TX", zip: "76010", lat: 32.7357, lon: -97.1081, areaCode: "817" },
+  { id: "plano", name: "Plano", state: "TX", zip: "75074", lat: 33.0198, lon: -96.6989, areaCode: "972" },
+  { id: "irving", name: "Irving", state: "TX", zip: "75060", lat: 32.8140, lon: -96.9489, areaCode: "972" },
+  { id: "garland", name: "Garland", state: "TX", zip: "75040", lat: 32.9126, lon: -96.6389, areaCode: "972" },
+  { id: "mckinney", name: "McKinney", state: "TX", zip: "75069", lat: 33.1972, lon: -96.6397, areaCode: "469" },
+  { id: "denton", name: "Denton", state: "TX", zip: "76201", lat: 33.2148, lon: -97.1331, areaCode: "940" },
+  { id: "richardson", name: "Richardson", state: "TX", zip: "75080", lat: 32.9483, lon: -96.7299, areaCode: "972" },
+  { id: "frisco", name: "Frisco", state: "TX", zip: "75034", lat: 33.1507, lon: -96.8236, areaCode: "469" },
+  // Houston
+  { id: "houston", name: "Houston", state: "TX", zip: "77002", lat: 29.7604, lon: -95.3698, areaCode: "713" },
+  { id: "sugar-land", name: "Sugar Land", state: "TX", zip: "77478", lat: 29.6197, lon: -95.6349, areaCode: "281" },
+  { id: "pasadena-tx", name: "Pasadena", state: "TX", zip: "77502", lat: 29.6911, lon: -95.2091, areaCode: "281" },
+  { id: "pearland", name: "Pearland", state: "TX", zip: "77581", lat: 29.5636, lon: -95.2860, areaCode: "281" },
+  { id: "the-woodlands", name: "The Woodlands", state: "TX", zip: "77380", lat: 30.1658, lon: -95.4613, areaCode: "281" },
+  { id: "league-city", name: "League City", state: "TX", zip: "77573", lat: 29.5075, lon: -95.0950, areaCode: "281" },
+  { id: "missouri-city", name: "Missouri City", state: "TX", zip: "77459", lat: 29.6186, lon: -95.5377, areaCode: "281" },
+  { id: "baytown", name: "Baytown", state: "TX", zip: "77520", lat: 29.7355, lon: -94.9774, areaCode: "281" },
+  { id: "conroe", name: "Conroe", state: "TX", zip: "77301", lat: 30.3119, lon: -95.4560, areaCode: "936" },
+  // DC Metro
+  { id: "washington-dc", name: "Washington", state: "DC", zip: "20001", lat: 38.9072, lon: -77.0369, areaCode: "202" },
+  { id: "arlington-va", name: "Arlington", state: "VA", zip: "22201", lat: 38.8799, lon: -77.1068, areaCode: "703" },
+  { id: "alexandria", name: "Alexandria", state: "VA", zip: "22314", lat: 38.8048, lon: -77.0469, areaCode: "703" },
+  { id: "silver-spring", name: "Silver Spring", state: "MD", zip: "20910", lat: 38.9907, lon: -77.0261, areaCode: "301" },
+  { id: "bethesda", name: "Bethesda", state: "MD", zip: "20814", lat: 38.9847, lon: -77.0947, areaCode: "301" },
+  { id: "fairfax", name: "Fairfax", state: "VA", zip: "22030", lat: 38.8462, lon: -77.3064, areaCode: "703" },
+  { id: "reston", name: "Reston", state: "VA", zip: "20190", lat: 38.9687, lon: -77.3411, areaCode: "703" },
+  { id: "rockville", name: "Rockville", state: "MD", zip: "20850", lat: 39.0840, lon: -77.1528, areaCode: "301" },
+  { id: "tysons", name: "Tysons", state: "VA", zip: "22182", lat: 38.9187, lon: -77.2311, areaCode: "703" },
+  // Seattle Metro
+  { id: "seattle", name: "Seattle", state: "WA", zip: "98101", lat: 47.6062, lon: -122.3321, areaCode: "206" },
+  { id: "bellevue", name: "Bellevue", state: "WA", zip: "98004", lat: 47.6101, lon: -122.2015, areaCode: "425" },
+  { id: "tacoma", name: "Tacoma", state: "WA", zip: "98402", lat: 47.2529, lon: -122.4443, areaCode: "253" },
+  { id: "redmond", name: "Redmond", state: "WA", zip: "98052", lat: 47.6740, lon: -122.1215, areaCode: "425" },
+  { id: "kent", name: "Kent", state: "WA", zip: "98032", lat: 47.3809, lon: -122.2348, areaCode: "253" },
+  { id: "renton", name: "Renton", state: "WA", zip: "98057", lat: 47.4829, lon: -122.2171, areaCode: "425" },
+  { id: "federal-way", name: "Federal Way", state: "WA", zip: "98003", lat: 47.3223, lon: -122.3126, areaCode: "253" },
+  { id: "kirkland", name: "Kirkland", state: "WA", zip: "98033", lat: 47.6815, lon: -122.2087, areaCode: "425" },
+  { id: "auburn", name: "Auburn", state: "WA", zip: "98002", lat: 47.3073, lon: -122.2285, areaCode: "253" },
+  { id: "bothell", name: "Bothell", state: "WA", zip: "98011", lat: 47.7601, lon: -122.2054, areaCode: "425" },
+  { id: "everett", name: "Everett", state: "WA", zip: "98201", lat: 47.9790, lon: -122.2021, areaCode: "425" },
+  // Miami Metro
+  { id: "miami", name: "Miami", state: "FL", zip: "33130", lat: 25.7617, lon: -80.1918, areaCode: "305" },
+  { id: "fort-lauderdale", name: "Fort Lauderdale", state: "FL", zip: "33301", lat: 26.1224, lon: -80.1373, areaCode: "954" },
+  { id: "hialeah", name: "Hialeah", state: "FL", zip: "33010", lat: 25.8576, lon: -80.2781, areaCode: "305" },
+  { id: "hollywood-fl", name: "Hollywood", state: "FL", zip: "33020", lat: 26.0112, lon: -80.1495, areaCode: "954" },
+  { id: "coral-springs", name: "Coral Springs", state: "FL", zip: "33065", lat: 26.2712, lon: -80.2706, areaCode: "954" },
+  { id: "pembroke-pines", name: "Pembroke Pines", state: "FL", zip: "33024", lat: 26.0031, lon: -80.2241, areaCode: "954" },
+  { id: "boca-raton", name: "Boca Raton", state: "FL", zip: "33432", lat: 26.3587, lon: -80.0831, areaCode: "561" },
+  { id: "deerfield-beach", name: "Deerfield Beach", state: "FL", zip: "33441", lat: 26.3185, lon: -80.0998, areaCode: "954" },
+  // Phoenix Metro
+  { id: "phoenix", name: "Phoenix", state: "AZ", zip: "85004", lat: 33.4484, lon: -112.0740, areaCode: "602" },
+  { id: "mesa", name: "Mesa", state: "AZ", zip: "85201", lat: 33.4152, lon: -111.8315, areaCode: "480" },
+  { id: "scottsdale", name: "Scottsdale", state: "AZ", zip: "85251", lat: 33.4942, lon: -111.9261, areaCode: "480" },
+  { id: "chandler", name: "Chandler", state: "AZ", zip: "85225", lat: 33.3062, lon: -111.8413, areaCode: "480" },
+  { id: "gilbert", name: "Gilbert", state: "AZ", zip: "85234", lat: 33.3528, lon: -111.7890, areaCode: "480" },
+  { id: "tempe", name: "Tempe", state: "AZ", zip: "85281", lat: 33.4255, lon: -111.9400, areaCode: "480" },
+  { id: "peoria", name: "Peoria", state: "AZ", zip: "85345", lat: 33.5806, lon: -112.2374, areaCode: "623" },
+  { id: "glendale-az", name: "Glendale", state: "AZ", zip: "85301", lat: 33.5387, lon: -112.1860, areaCode: "623" },
+  { id: "surprise", name: "Surprise", state: "AZ", zip: "85374", lat: 33.6292, lon: -112.3680, areaCode: "623" },
+  { id: "goodyear", name: "Goodyear", state: "AZ", zip: "85338", lat: 33.4353, lon: -112.3585, areaCode: "623" },
+  // Denver Metro
+  { id: "denver", name: "Denver", state: "CO", zip: "80202", lat: 39.7392, lon: -104.9903, areaCode: "303" },
+  { id: "aurora", name: "Aurora", state: "CO", zip: "80012", lat: 39.7294, lon: -104.8319, areaCode: "303" },
+  { id: "lakewood", name: "Lakewood", state: "CO", zip: "80226", lat: 39.7047, lon: -105.0814, areaCode: "303" },
+  { id: "westminster", name: "Westminster", state: "CO", zip: "80031", lat: 39.8367, lon: -105.0372, areaCode: "303" },
+  { id: "arvada", name: "Arvada", state: "CO", zip: "80002", lat: 39.8028, lon: -105.0875, areaCode: "303" },
+  { id: "thornton", name: "Thornton", state: "CO", zip: "80229", lat: 39.8680, lon: -104.9719, areaCode: "303" },
+  { id: "centennial", name: "Centennial", state: "CO", zip: "80112", lat: 39.5791, lon: -104.8769, areaCode: "303" },
+  { id: "boulder", name: "Boulder", state: "CO", zip: "80302", lat: 40.0150, lon: -105.2705, areaCode: "303" },
+  { id: "longmont", name: "Longmont", state: "CO", zip: "80501", lat: 40.1672, lon: -105.1019, areaCode: "303" },
+  { id: "broomfield", name: "Broomfield", state: "CO", zip: "80020", lat: 39.9205, lon: -105.0867, areaCode: "303" },
+  // Atlanta Metro
+  { id: "atlanta", name: "Atlanta", state: "GA", zip: "30303", lat: 33.7490, lon: -84.3880, areaCode: "404" },
+  { id: "marietta", name: "Marietta", state: "GA", zip: "30060", lat: 33.9526, lon: -84.5499, areaCode: "770" },
+  { id: "roswell", name: "Roswell", state: "GA", zip: "30075", lat: 34.0232, lon: -84.3616, areaCode: "770" },
+  { id: "sandy-springs", name: "Sandy Springs", state: "GA", zip: "30328", lat: 33.9304, lon: -84.3733, areaCode: "404" },
+  { id: "alpharetta", name: "Alpharetta", state: "GA", zip: "30009", lat: 34.0754, lon: -84.2941, areaCode: "770" },
+  { id: "johns-creek", name: "Johns Creek", state: "GA", zip: "30097", lat: 34.0289, lon: -84.1988, areaCode: "770" },
+  { id: "kennesaw", name: "Kennesaw", state: "GA", zip: "30144", lat: 34.0234, lon: -84.6155, areaCode: "770" },
+  { id: "decatur", name: "Decatur", state: "GA", zip: "30030", lat: 33.7748, lon: -84.2963, areaCode: "404" },
+  { id: "dunwoody", name: "Dunwoody", state: "GA", zip: "30338", lat: 33.9462, lon: -84.3346, areaCode: "770" },
+  // Boston Metro
+  { id: "boston", name: "Boston", state: "MA", zip: "02108", lat: 42.3601, lon: -71.0589, areaCode: "617" },
+  { id: "cambridge", name: "Cambridge", state: "MA", zip: "02139", lat: 42.3736, lon: -71.1097, areaCode: "617" },
+  { id: "somerville", name: "Somerville", state: "MA", zip: "02143", lat: 42.3876, lon: -71.0995, areaCode: "617" },
+  { id: "quincy", name: "Quincy", state: "MA", zip: "02169", lat: 42.2529, lon: -71.0023, areaCode: "617" },
+  { id: "brookline", name: "Brookline", state: "MA", zip: "02445", lat: 42.3318, lon: -71.1212, areaCode: "617" },
+  { id: "newton", name: "Newton", state: "MA", zip: "02458", lat: 42.3370, lon: -71.2092, areaCode: "617" },
+  { id: "waltham", name: "Waltham", state: "MA", zip: "02451", lat: 42.3765, lon: -71.2356, areaCode: "781" },
+  { id: "malden", name: "Malden", state: "MA", zip: "02148", lat: 42.4251, lon: -71.0662, areaCode: "781" },
+  { id: "medford", name: "Medford", state: "MA", zip: "02155", lat: 42.4184, lon: -71.1062, areaCode: "781" },
+  // Minneapolis Metro
+  { id: "minneapolis", name: "Minneapolis", state: "MN", zip: "55401", lat: 44.9778, lon: -93.2650, areaCode: "612" },
+  { id: "st-paul", name: "St. Paul", state: "MN", zip: "55101", lat: 44.9537, lon: -93.0900, areaCode: "651" },
+  { id: "bloomington", name: "Bloomington", state: "MN", zip: "55431", lat: 44.8408, lon: -93.2983, areaCode: "952" },
+  { id: "plymouth", name: "Plymouth", state: "MN", zip: "55441", lat: 45.0105, lon: -93.4555, areaCode: "763" },
+  { id: "brooklyn-park", name: "Brooklyn Park", state: "MN", zip: "55443", lat: 45.0941, lon: -93.3563, areaCode: "763" },
+  { id: "eagan", name: "Eagan", state: "MN", zip: "55121", lat: 44.8041, lon: -93.1669, areaCode: "651" },
+  { id: "woodbury", name: "Woodbury", state: "MN", zip: "55125", lat: 44.9239, lon: -92.9594, areaCode: "651" },
+  { id: "maple-grove", name: "Maple Grove", state: "MN", zip: "55369", lat: 45.0725, lon: -93.4558, areaCode: "763" },
+  // Portland Metro
+  { id: "portland", name: "Portland", state: "OR", zip: "97201", lat: 45.5152, lon: -122.6784, areaCode: "503" },
+  { id: "beaverton", name: "Beaverton", state: "OR", zip: "97005", lat: 45.4871, lon: -122.8037, areaCode: "503" },
+  { id: "hillsboro", name: "Hillsboro", state: "OR", zip: "97123", lat: 45.5229, lon: -122.9898, areaCode: "503" },
+  { id: "gresham", name: "Gresham", state: "OR", zip: "97030", lat: 45.5023, lon: -122.4310, areaCode: "503" },
+  { id: "lake-oswego", name: "Lake Oswego", state: "OR", zip: "97034", lat: 45.4207, lon: -122.6706, areaCode: "503" },
+  { id: "tigard", name: "Tigard", state: "OR", zip: "97223", lat: 45.4312, lon: -122.7715, areaCode: "503" },
+  { id: "tualatin", name: "Tualatin", state: "OR", zip: "97062", lat: 45.3838, lon: -122.7637, areaCode: "503" },
+  { id: "oregon-city", name: "Oregon City", state: "OR", zip: "97045", lat: 45.3573, lon: -122.6068, areaCode: "503" },
+  // Las Vegas Metro
+  { id: "las-vegas", name: "Las Vegas", state: "NV", zip: "89101", lat: 36.1699, lon: -115.1398, areaCode: "702" },
+  { id: "henderson", name: "Henderson", state: "NV", zip: "89002", lat: 36.0395, lon: -114.9817, areaCode: "702" },
+  { id: "north-las-vegas", name: "North Las Vegas", state: "NV", zip: "89030", lat: 36.1989, lon: -115.1175, areaCode: "702" },
+  { id: "spring-valley", name: "Spring Valley", state: "NV", zip: "89147", lat: 36.1028, lon: -115.2450, areaCode: "702" },
+  { id: "paradise", name: "Paradise", state: "NV", zip: "89109", lat: 36.0970, lon: -115.1467, areaCode: "702" },
+  { id: "enterprise", name: "Enterprise", state: "NV", zip: "89139", lat: 36.0268, lon: -115.2176, areaCode: "702" },
+  // San Diego Metro
+  { id: "san-diego", name: "San Diego", state: "CA", zip: "92101", lat: 32.7157, lon: -117.1611, areaCode: "619" },
+  { id: "chula-vista", name: "Chula Vista", state: "CA", zip: "91910", lat: 32.6401, lon: -117.0842, areaCode: "619" },
+  { id: "oceanside", name: "Oceanside", state: "CA", zip: "92054", lat: 33.1959, lon: -117.3795, areaCode: "760" },
+  { id: "escondido", name: "Escondido", state: "CA", zip: "92025", lat: 33.1192, lon: -117.0864, areaCode: "760" },
+  { id: "carlsbad", name: "Carlsbad", state: "CA", zip: "92008", lat: 33.1581, lon: -117.3506, areaCode: "760" },
+  { id: "el-cajon", name: "El Cajon", state: "CA", zip: "92020", lat: 32.7948, lon: -116.9625, areaCode: "619" },
+  { id: "vista", name: "Vista", state: "CA", zip: "92083", lat: 33.2000, lon: -117.2426, areaCode: "760" },
+  { id: "san-marcos", name: "San Marcos", state: "CA", zip: "92069", lat: 33.1434, lon: -117.1661, areaCode: "760" },
+  // Tampa Metro
+  { id: "tampa", name: "Tampa", state: "FL", zip: "33602", lat: 27.9506, lon: -82.4572, areaCode: "813" },
+  { id: "st-petersburg", name: "St. Petersburg", state: "FL", zip: "33701", lat: 27.7676, lon: -82.6403, areaCode: "727" },
+  { id: "clearwater", name: "Clearwater", state: "FL", zip: "33755", lat: 27.9659, lon: -82.8001, areaCode: "727" },
+  { id: "brandon", name: "Brandon", state: "FL", zip: "33511", lat: 27.9378, lon: -82.2859, areaCode: "813" },
+  { id: "largo", name: "Largo", state: "FL", zip: "33770", lat: 27.9095, lon: -82.7873, areaCode: "727" },
+  { id: "palm-harbor", name: "Palm Harbor", state: "FL", zip: "34683", lat: 28.0781, lon: -82.7637, areaCode: "727" },
+  { id: "riverview", name: "Riverview", state: "FL", zip: "33578", lat: 27.8764, lon: -82.3265, areaCode: "813" },
+  // Orlando Metro
+  { id: "orlando", name: "Orlando", state: "FL", zip: "32801", lat: 28.5383, lon: -81.3792, areaCode: "407" },
+  { id: "kissimmee", name: "Kissimmee", state: "FL", zip: "34741", lat: 28.2920, lon: -81.4076, areaCode: "407" },
+  { id: "sanford", name: "Sanford", state: "FL", zip: "32771", lat: 28.8003, lon: -81.2698, areaCode: "407" },
+  { id: "altamonte-springs", name: "Altamonte Springs", state: "FL", zip: "32701", lat: 28.6611, lon: -81.3656, areaCode: "407" },
+  { id: "winter-park", name: "Winter Park", state: "FL", zip: "32789", lat: 28.5993, lon: -81.3393, areaCode: "407" },
+  { id: "ocoee", name: "Ocoee", state: "FL", zip: "34761", lat: 28.5692, lon: -81.5440, areaCode: "407" },
+  { id: "apopka", name: "Apopka", state: "FL", zip: "32703", lat: 28.6934, lon: -81.5322, areaCode: "407" },
+  // Nashville Metro
+  { id: "nashville", name: "Nashville", state: "TN", zip: "37203", lat: 36.1627, lon: -86.7816, areaCode: "615" },
+  { id: "franklin", name: "Franklin", state: "TN", zip: "37064", lat: 35.9251, lon: -86.8689, areaCode: "615" },
+  { id: "murfreesboro", name: "Murfreesboro", state: "TN", zip: "37130", lat: 35.8456, lon: -86.3903, areaCode: "615" },
+  { id: "hendersonville", name: "Hendersonville", state: "TN", zip: "37075", lat: 36.3048, lon: -86.6200, areaCode: "615" },
+  { id: "gallatin", name: "Gallatin", state: "TN", zip: "37066", lat: 36.3887, lon: -86.4467, areaCode: "615" },
+  { id: "lebanon", name: "Lebanon", state: "TN", zip: "37087", lat: 36.2081, lon: -86.2911, areaCode: "615" },
+  { id: "mt-juliet", name: "Mt. Juliet", state: "TN", zip: "37122", lat: 36.2001, lon: -86.5186, areaCode: "615" },
+  // Standalone cities
+  { id: "austin", name: "Austin", state: "TX", zip: "78701", lat: 30.2672, lon: -97.7431, areaCode: "512" },
+  { id: "philadelphia", name: "Philadelphia", state: "PA", zip: "19102", lat: 39.9526, lon: -75.1652, areaCode: "215" },
+  { id: "columbus", name: "Columbus", state: "OH", zip: "43215", lat: 39.9612, lon: -82.9988, areaCode: "614" },
+  { id: "raleigh", name: "Raleigh", state: "NC", zip: "27601", lat: 35.7796, lon: -78.6382, areaCode: "919" },
+  { id: "cincinnati", name: "Cincinnati", state: "OH", zip: "45202", lat: 39.1031, lon: -84.5120, areaCode: "513" },
+  { id: "baton-rouge", name: "Baton Rouge", state: "LA", zip: "70801", lat: 30.4515, lon: -91.1871, areaCode: "225" },
+  { id: "new-orleans", name: "New Orleans", state: "LA", zip: "70112", lat: 29.9511, lon: -90.0715, areaCode: "504" },
+  { id: "kansas-city", name: "Kansas City", state: "MO", zip: "64106", lat: 39.0997, lon: -94.5786, areaCode: "816" },
+  { id: "honolulu", name: "Honolulu", state: "HI", zip: "96813", lat: 21.3069, lon: -157.8583, areaCode: "808" },
+  { id: "louisville", name: "Louisville", state: "KY", zip: "40202", lat: 38.2527, lon: -85.7585, areaCode: "502" },
+  { id: "sacramento", name: "Sacramento", state: "CA", zip: "95814", lat: 38.5816, lon: -121.4944, areaCode: "916" },
+  { id: "san-antonio", name: "San Antonio", state: "TX", zip: "78205", lat: 29.4241, lon: -98.4936, areaCode: "210" },
+  { id: "baltimore", name: "Baltimore", state: "MD", zip: "21201", lat: 39.2904, lon: -76.6122, areaCode: "410" },
+  { id: "charlotte", name: "Charlotte", state: "NC", zip: "28202", lat: 35.2271, lon: -80.8431, areaCode: "704" },
+  { id: "detroit", name: "Detroit", state: "MI", zip: "48226", lat: 42.3314, lon: -83.0458, areaCode: "313" },
+  { id: "tucson", name: "Tucson", state: "AZ", zip: "85701", lat: 32.2226, lon: -110.9747, areaCode: "520" },
+  { id: "milwaukee", name: "Milwaukee", state: "WI", zip: "53202", lat: 43.0389, lon: -87.9065, areaCode: "414" },
+  { id: "albuquerque", name: "Albuquerque", state: "NM", zip: "87101", lat: 35.0844, lon: -106.6504, areaCode: "505" },
+  { id: "virginia-beach", name: "Virginia Beach", state: "VA", zip: "23451", lat: 36.8529, lon: -75.9780, areaCode: "757" },
+  { id: "el-paso", name: "El Paso", state: "TX", zip: "79901", lat: 31.7619, lon: -106.4850, areaCode: "915" },
+  { id: "memphis", name: "Memphis", state: "TN", zip: "38103", lat: 35.1495, lon: -90.0490, areaCode: "901" },
+  { id: "pittsburgh", name: "Pittsburgh", state: "PA", zip: "15222", lat: 40.4406, lon: -79.9959, areaCode: "412" },
+  { id: "durham", name: "Durham", state: "NC", zip: "27701", lat: 35.9940, lon: -78.8986, areaCode: "919" },
+  { id: "buffalo", name: "Buffalo", state: "NY", zip: "14202", lat: 42.8864, lon: -78.8784, areaCode: "716" },
+  { id: "wichita", name: "Wichita", state: "KS", zip: "67202", lat: 37.6872, lon: -97.3301, areaCode: "316" },
+  { id: "spokane", name: "Spokane", state: "WA", zip: "99201", lat: 47.6588, lon: -117.4260, areaCode: "509" },
+  { id: "charleston", name: "Charleston", state: "SC", zip: "29401", lat: 32.7765, lon: -79.9311, areaCode: "843" },
+  { id: "hartford", name: "Hartford", state: "CT", zip: "06103", lat: 41.7658, lon: -72.6734, areaCode: "860" },
+  { id: "cleveland", name: "Cleveland", state: "OH", zip: "44114", lat: 41.4993, lon: -81.6944, areaCode: "216" },
+  { id: "colorado-springs", name: "Colorado Springs", state: "CO", zip: "80903", lat: 38.8339, lon: -104.8214, areaCode: "719" },
+  { id: "boise", name: "Boise", state: "ID", zip: "83702", lat: 43.6150, lon: -116.2023, areaCode: "208" },
+  { id: "greensboro", name: "Greensboro", state: "NC", zip: "27401", lat: 36.0726, lon: -79.7920, areaCode: "336" },
+  { id: "jacksonville", name: "Jacksonville", state: "FL", zip: "32202", lat: 30.3322, lon: -81.6557, areaCode: "904" },
+  { id: "chattanooga", name: "Chattanooga", state: "TN", zip: "37402", lat: 35.0456, lon: -85.3097, areaCode: "423" },
+  { id: "knoxville", name: "Knoxville", state: "TN", zip: "37902", lat: 35.9606, lon: -83.9207, areaCode: "865" },
+  { id: "lincoln", name: "Lincoln", state: "NE", zip: "68508", lat: 40.8136, lon: -96.7026, areaCode: "402" },
+  { id: "tallahassee", name: "Tallahassee", state: "FL", zip: "32301", lat: 30.4383, lon: -84.2807, areaCode: "850" },
+  { id: "overland-park", name: "Overland Park", state: "KS", zip: "66204", lat: 38.9822, lon: -94.6708, areaCode: "913" },
+  { id: "norfolk", name: "Norfolk", state: "VA", zip: "23510", lat: 36.8508, lon: -76.2859, areaCode: "757" },
+  { id: "savannah", name: "Savannah", state: "GA", zip: "31401", lat: 32.0809, lon: -81.0912, areaCode: "912" },
+  { id: "cary", name: "Cary", state: "NC", zip: "27511", lat: 35.7915, lon: -78.7811, areaCode: "919" },
+  { id: "salt-lake-city", name: "Salt Lake City", state: "UT", zip: "84101", lat: 40.7608, lon: -111.8910, areaCode: "801" },
+  { id: "sioux-falls", name: "Sioux Falls", state: "SD", zip: "57104", lat: 43.5460, lon: -96.7313, areaCode: "605" },
+  { id: "wilmington", name: "Wilmington", state: "NC", zip: "28401", lat: 34.2257, lon: -77.9447, areaCode: "910" },
+];
+
+// ── data pools ────────────────────────────────────────────────────────────────
+
+interface PermitTemplate {
+  desc: string;
+  trades: Trade[];
+  min: number;
+  max: number;
+}
+
+const TEMPLATES: PermitTemplate[] = [
+  // HVAC
+  { desc: "Complete HVAC system replacement for commercial office building including new rooftop units, ductwork, and building automation controls", trades: ["HVAC"], min: 500000, max: 3500000 },
+  { desc: "Installation of new chiller plant and cooling tower for 200,000 SF commercial complex with redundant piping", trades: ["HVAC"], min: 800000, max: 4000000 },
+  { desc: "Retrofit existing HVAC system with high-efficiency variable refrigerant flow (VRF) units across all floors", trades: ["HVAC"], min: 350000, max: 2000000 },
+  // Electrical
+  { desc: "Electrical service upgrade and panel replacement with new 4000A main switchgear and emergency generator", trades: ["Electrical"], min: 400000, max: 2500000 },
+  { desc: "Complete electrical rewiring of commercial building including new LED lighting and EV charging stations", trades: ["Electrical"], min: 300000, max: 1800000 },
+  { desc: "Installation of 500kW solar panel array with battery storage system and grid interconnection", trades: ["Electrical"], min: 600000, max: 3000000 },
+  // Plumbing
+  { desc: "Plumbing rough-in for new medical office space including exam rooms, labs, and specialized waste systems", trades: ["Plumbing"], min: 250000, max: 1500000 },
+  { desc: "Complete plumbing renovation for restaurant and commercial kitchen with new grease traps and backflow preventers", trades: ["Plumbing"], min: 150000, max: 800000 },
+  { desc: "Water service upgrade and fire line installation for 5-story mixed-use development", trades: ["Plumbing", "Fire Suppression"], min: 400000, max: 2000000 },
+  // Roofing
+  { desc: "Complete roof replacement on commercial building with TPO membrane system, new insulation, and parapet wall repairs", trades: ["Roofing"], min: 200000, max: 1200000 },
+  { desc: "Installation of green roof system with integrated stormwater management on commercial structure", trades: ["Roofing"], min: 300000, max: 1500000 },
+  { desc: "Roofing and waterproofing for new parking garage structure including expansion joints and drainage systems", trades: ["Roofing", "Concrete"], min: 500000, max: 2500000 },
+  // Fire Suppression
+  { desc: "Installation of wet sprinkler system throughout commercial office building per NFPA 13 requirements", trades: ["Fire Suppression"], min: 200000, max: 1000000 },
+  { desc: "Upgrade fire alarm and suppression systems including new standpipe and smoke detection for high-rise building", trades: ["Fire Suppression", "Electrical"], min: 400000, max: 2000000 },
+  { desc: "Fire suppression system installation for commercial kitchen hood and assembly occupancy areas", trades: ["Fire Suppression"], min: 100000, max: 500000 },
+  // Glass & Glazing
+  { desc: "Installation of glass curtain wall system on 12-story commercial tower with low-E insulated glazing units", trades: ["Glass & Glazing"], min: 800000, max: 5000000 },
+  { desc: "Storefront glass and aluminum framing installation for retail complex with energy-efficient glazing", trades: ["Glass & Glazing"], min: 150000, max: 800000 },
+  { desc: "Window replacement program for commercial building with new thermally-broken aluminum frames", trades: ["Glass & Glazing"], min: 200000, max: 1200000 },
+  // Concrete
+  { desc: "Concrete foundation and slab-on-grade for new 50,000 SF warehouse and distribution center", trades: ["Concrete"], min: 400000, max: 2500000 },
+  { desc: "Structural concrete work for multi-level parking garage including post-tensioned slabs and ramps", trades: ["Concrete", "Structural Steel"], min: 1000000, max: 8000000 },
+  { desc: "Foundation repair and concrete restoration for commercial building including crack injection and waterproofing", trades: ["Concrete"], min: 150000, max: 900000 },
+  // Structural Steel
+  { desc: "Structural steel erection for new 8-story commercial office building, approximately 2,400 tons", trades: ["Structural Steel"], min: 2000000, max: 12000000 },
+  { desc: "Steel frame construction for industrial manufacturing facility including mezzanine and overhead crane rails", trades: ["Structural Steel"], min: 1500000, max: 8000000 },
+  { desc: "Structural steel reinforcement and seismic retrofit of existing commercial building per updated code", trades: ["Structural Steel"], min: 500000, max: 3000000 },
+  // Demolition
+  { desc: "Interior demolition of 45,000 SF commercial space for upcoming tenant improvement project", trades: ["Demolition"], min: 80000, max: 400000 },
+  { desc: "Complete building demolition and site preparation for new commercial development project", trades: ["Demolition"], min: 200000, max: 1500000 },
+  { desc: "Selective demolition and hazardous material abatement for building renovation and modernization", trades: ["Demolition"], min: 100000, max: 600000 },
+  // General Construction
+  { desc: "Tenant improvement buildout for new corporate office space, 35,000 SF with conference rooms and open office areas", trades: ["General Construction"], min: 500000, max: 3500000 },
+  { desc: "Commercial renovation of retail space including new flooring, ceilings, lighting, and ADA compliance upgrades", trades: ["General Construction"], min: 200000, max: 1200000 },
+  { desc: "New construction of 3-story mixed-use commercial building with retail on ground floor and offices above", trades: ["General Construction", "Concrete", "Structural Steel"], min: 3000000, max: 15000000 },
+  { desc: "Restaurant buildout including commercial kitchen, dining area, bar, and outdoor patio space", trades: ["General Construction", "Plumbing"], min: 300000, max: 1800000 },
+  { desc: "Medical office buildout including exam rooms, imaging suite, and specialized MEP systems", trades: ["General Construction", "HVAC", "Plumbing"], min: 800000, max: 5000000 },
+  // Multi-trade
+  { desc: "Major hotel renovation including HVAC replacement, electrical upgrade, plumbing modernization, and new fire alarm system", trades: ["HVAC", "Electrical", "Plumbing"], min: 2000000, max: 12000000 },
+  { desc: "New data center construction with precision cooling, redundant electrical systems, and clean agent fire suppression", trades: ["HVAC", "Electrical", "Fire Suppression"], min: 3000000, max: 15000000 },
+];
+
+const GC_COMPANIES: string[] = [
+  "Turner Construction", "Skanska USA", "Hensel Phelps", "Clark Construction",
+  "Moss Construction", "Webcor Builders", "DPR Construction", "Holder Construction",
+  "Gilbane Building Company", "McCarthy Building Companies", "Brasfield & Gorrie",
+  "Barton Malow", "Mortenson Construction", "Swinerton Builders", "Whiting-Turner",
+  "Walsh Construction", "AECOM Hunt", "Suffolk Construction", "Balfour Beatty",
+  "PCL Construction", "Shawmut Design", "Structure Tone", "Lendlease",
+  "JE Dunn Construction", "Ryan Companies", "Pepper Construction", "Power Construction",
+  "Bulley & Andrews", "Clayco Inc", "Manhattan Construction", "Austin Industries",
+  "Rogers-O'Brien Construction", "Cadence McShane", "Harvey-Cleary Builders",
+  "Tellepsen Builders", "SpawGlass Contractors", "Flintco LLC",
+  "W.M. Jordan Company", "The Weitz Company", "Alston Construction",
+  "JMB Construction", "Pacific Building Group", "Bernards Construction",
+  "Charles Pankow Builders", "Rudolph and Sletten", "Performance Contractors",
+  "Baker Concrete Construction", "Granite Construction", "Kiewit Corporation",
+  "BL Harbert International",
+];
+
+const FIRST_NAMES: string[] = [
+  "Mike", "Sarah", "James", "Jennifer", "Robert", "Maria", "David", "Lisa",
+  "John", "Patricia", "Mark", "Linda", "Steve", "Karen", "Chris", "Angela",
+  "Tom", "Jessica", "Brian", "Michelle", "Kevin", "Rachel", "Eric", "Amanda",
+  "Dan", "Heather", "Scott", "Nicole", "Jeff", "Stephanie",
+];
+
+const LAST_NAMES: string[] = [
+  "Reynolds", "Chen", "Kowalski", "Williams", "Johnson", "Martinez",
+  "Anderson", "Thompson", "Garcia", "Robinson", "Clark", "Lewis",
+  "Lee", "Walker", "Hall", "Allen", "Young", "King", "Wright", "Lopez",
+  "Hill", "Green", "Adams", "Baker", "Nelson", "Mitchell", "Perez",
+  "Roberts", "Turner", "Phillips",
+];
+
+const STREET_NAMES: string[] = [
+  "Main", "Oak", "Elm", "Maple", "Pine", "Cedar", "First", "Second", "Third",
+  "Fourth", "Fifth", "Market", "Broadway", "Washington", "Lincoln", "Jefferson",
+  "Madison", "Park", "Highland", "Lake", "Spring", "Valley", "Hill", "Ridge",
+  "Commerce", "Industrial", "Tech Center", "Innovation", "Century", "Harbor",
+  "Mission", "University", "Central", "State", "Liberty", "Union", "Pioneer",
+  "Heritage", "Sunset", "Peachtree", "Congress", "Travis", "Magnolia",
+];
+
+const STREET_TYPES: string[] = [
+  "St", "Ave", "Blvd", "Dr", "Way", "Pkwy", "Rd", "Pl", "Ln",
+];
+
+const STATUSES: PermitStatus[] = ["Issued", "Under Review", "Approved", "Completed"];
+
+// ── permit generator ──────────────────────────────────────────────────────────
+
+function generatePermitsForCity(city: CityMeta): Permit[] {
+  const rng = new Rng(`permits-${city.id}-v1`);
+  const count = rng.int(3, 7);
+  const permits: Permit[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const template = rng.pick(TEMPLATES);
+    const streetNum = rng.int(100, 9999);
+    const streetName = rng.pick(STREET_NAMES);
+    const streetType = rng.pick(STREET_TYPES);
+    const address = `${streetNum} ${streetName} ${streetType}`;
+
+    const company = rng.pick(GC_COMPANIES);
+    const confRoll = rng.next();
+    const confidence: ContactConfidence = confRoll < 0.5 ? "High" : confRoll < 0.8 ? "Medium" : "Low";
+
+    const firstName = confidence !== "Low" ? rng.pick(FIRST_NAMES) : null;
+    const lastName = confidence !== "Low" ? rng.pick(LAST_NAMES) : null;
+    const contactName = firstName && lastName ? `${firstName} ${lastName}` : null;
+
+    const companySlug = company.toLowerCase().replace(/[^a-z]/g, "").slice(0, 14);
+    const email = contactName
+      ? `${firstName!.charAt(0).toLowerCase()}${lastName!.toLowerCase()}@${companySlug}.com`
+      : null;
+    const phone = confidence !== "Low"
+      ? `(${city.areaCode}) 555-${String(rng.int(1000, 9999)).padStart(4, "0")}`
+      : null;
+
+    const rawValue = rng.int(template.min, template.max);
+    const estimatedValue = Math.round(rawValue / 1000) * 1000;
+
+    const dayOffset = rng.int(1, 30);
+    const status = rng.pick(STATUSES);
+
+    const latOffset = (rng.next() - 0.5) * 0.04;
+    const lonOffset = (rng.next() - 0.5) * 0.04;
+
+    const permitHash = hash(`${city.id}-${i}`);
+    const permitNum = String(permitHash & 0xfffff).padStart(6, "0");
+
+    permits.push({
+      id: `${city.id}-${String(i + 1).padStart(3, "0")}`,
+      permitNumber: `BLD-2026-${permitNum}`,
+      address,
+      city: city.name,
+      state: city.state,
+      zip: city.zip,
+      latitude: Number((city.lat + latOffset).toFixed(4)),
+      longitude: Number((city.lon + lonOffset).toFixed(4)),
+      filingDate: daysAgo(dayOffset),
+      description: template.desc,
+      estimatedValue,
+      status,
+      trades: template.trades,
+      gcContact: {
+        companyName: company,
+        contactName,
+        phone,
+        email,
+        confidence,
+      },
+      source: `data.${city.id}.gov`,
+      sourceUpdatedAt: daysAgo(Math.max(1, dayOffset - rng.int(0, 2))),
+    });
+  }
+
+  return permits;
+}
+
+// ── build all permits ─────────────────────────────────────────────────────────
+
+const ALL_PERMITS: Permit[] = CITIES.flatMap(generatePermitsForCity);
+
+// ── city lookup for filtering ─────────────────────────────────────────────────
+
+const CITY_STATE_TO_ID: Record<string, string> = {};
+for (const c of CITIES) {
+  CITY_STATE_TO_ID[`${c.name}|${c.state}`] = c.id;
+}
 
 export function getMockPermitsForMetros(metroIds: string[]): Permit[] {
   if (metroIds.length === 0) return ALL_PERMITS;
   return ALL_PERMITS.filter((p) => {
-    const metro = CITY_TO_METRO[p.city];
-    return metro && metroIds.includes(metro);
+    const key = `${p.city}|${p.state}`;
+    const cityId = CITY_STATE_TO_ID[key];
+    return cityId !== undefined && metroIds.includes(cityId);
   });
 }
 
 export const MOCK_PERMITS = ALL_PERMITS;
+
+// ── currency formatters ───────────────────────────────────────────────────────
 
 export function formatCurrency(value: number): string {
   if (value >= 1_000_000) {
