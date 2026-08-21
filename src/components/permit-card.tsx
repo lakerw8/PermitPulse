@@ -3,7 +3,6 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
 import {
   MapPin,
   Calendar,
@@ -14,29 +13,21 @@ import {
   BookmarkCheck,
 } from "lucide-react";
 import { Permit } from "@/lib/types";
-import { formatCurrency } from "@/lib/mock-data";
+import { formatCurrency } from "@/lib/format";
 import { useAuth } from "@/lib/auth-context";
 import { useLeads } from "@/lib/leads-context";
 
-const STATUS_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
-  Issued: "default",
-  "Under Review": "secondary",
-  Approved: "default",
-  Completed: "outline",
+/**
+ * Status is carried by weight and a hairline, not by fill. Cobalt stays
+ * reserved for the controls the contractor acts on, per design.md.
+ */
+const STATUS_STYLES: Record<string, string> = {
+  Issued: "border-foreground/25 text-foreground",
+  "Under Review": "border-border text-muted-foreground",
+  Approved: "border-foreground/25 text-foreground",
+  Completed: "border-border text-muted-foreground/70",
 };
 
-const TRADE_COLORS: Record<string, string> = {
-  HVAC: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-  Electrical: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-  Plumbing: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300",
-  Roofing: "bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300",
-  "Fire Suppression": "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
-  "Glass & Glazing": "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300",
-  Concrete: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
-  "Structural Steel": "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300",
-  Demolition: "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300",
-  "General Construction": "bg-gray-100 text-gray-800 dark:bg-gray-900/40 dark:text-gray-300",
-};
 
 interface PermitCardProps {
   permit: Permit;
@@ -91,9 +82,13 @@ export function PermitCard({ permit, showLockedContact = true }: PermitCardProps
                 <Bookmark className="h-4 w-4" />
               )}
             </button>
-            <Badge variant={STATUS_VARIANT[permit.status] ?? "outline"} className="text-xs">
+            <span
+              className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${
+                STATUS_STYLES[permit.status] ?? "border-border text-muted-foreground"
+              }`}
+            >
               {permit.status}
-            </Badge>
+            </span>
           </div>
         </div>
 
@@ -101,7 +96,7 @@ export function PermitCard({ permit, showLockedContact = true }: PermitCardProps
           {permit.trades.map((trade) => (
             <span
               key={trade}
-              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${TRADE_COLORS[trade] ?? "bg-gray-100 text-gray-800"}`}
+              className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
             >
               {trade}
             </span>
@@ -143,9 +138,9 @@ export function PermitCard({ permit, showLockedContact = true }: PermitCardProps
         )}
 
         {showLockedContact && isPaid && (
-          <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 dark:border-green-800 dark:bg-green-950/30">
-            <Building2 className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
-            <span className="text-xs font-medium text-green-700 dark:text-green-400">
+          <div className="flex items-center gap-2 rounded-md border border-primary/25 bg-primary/8 px-3 py-2">
+            <Building2 className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs font-medium text-primary">
               {permit.gcContact.companyName}
               {permit.gcContact.phone && ` · ${permit.gcContact.phone}`}
             </span>

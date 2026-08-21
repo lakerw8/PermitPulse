@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Menu, User, LogOut, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const NAV_LINKS = [
   { href: "/permits", label: "Browse" },
@@ -58,6 +59,7 @@ export function Header() {
         </div>
 
         <div className="hidden items-center gap-2 md:flex">
+          <ThemeToggle />
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs font-medium transition-colors duration-200 hover:bg-muted">
@@ -94,6 +96,10 @@ export function Header() {
               </Link>
             </>
           )}
+        </div>
+
+        <div className="md:hidden">
+          <ThemeToggle />
         </div>
 
         <Sheet open={open} onOpenChange={setOpen}>

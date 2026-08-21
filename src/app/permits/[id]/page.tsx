@@ -10,7 +10,7 @@ import { LockedContact } from "@/components/locked-contact";
 import { usePermits } from "@/lib/permits-context";
 import { useAuth } from "@/lib/auth-context";
 import { useLeads } from "@/lib/leads-context";
-import { formatFullCurrency } from "@/lib/mock-data";
+import { formatFullCurrency } from "@/lib/format";
 import {
   ArrowLeft,
   MapPin,

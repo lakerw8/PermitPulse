@@ -27,7 +27,7 @@ import { useAuth, type Plan } from "@/lib/auth-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLeads } from "@/lib/leads-context";
 import { usePermits } from "@/lib/permits-context";
-import { formatCurrency } from "@/lib/mock-data";
+import { formatCurrency } from "@/lib/format";
 import { TRADES, METROS, type LeadStatus, type Trade } from "@/lib/types";
 import { cn } from "@/lib/utils";
 

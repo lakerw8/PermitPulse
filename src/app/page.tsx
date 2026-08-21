@@ -1,17 +1,32 @@
 /* Hallmark · genre: modern-minimal · macrostructure: Stat-Led · design-system: design.md · designed-as-app */
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PermitCard } from "@/components/permit-card";
-import { MOCK_PERMITS, formatCurrency } from "@/lib/mock-data";
-import { METROS } from "@/lib/types";
+import { METROS, type Permit } from "@/lib/types";
 import { ArrowRight } from "lucide-react";
 
-const allPermits = MOCK_PERMITS;
-const totalValue = allPermits.reduce((sum, p) => sum + p.estimatedValue, 0);
-const recentPermits = allPermits.slice(0, 4);
-
 export default function HomePage() {
+  const [recentPermits, setRecentPermits] = useState<Permit[]>([]);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams({
+      metros: "chicago,new-york,los-angeles,san-francisco",
+      days: "30",
+      limit: "4",
+    });
+    fetch(`/api/permits?${params}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const permits: Permit[] = data.permits ?? [];
+        setRecentPermits(permits);
+        setTotalCount(data.total ?? permits.length);
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <div>
       {/* Stat-Led Hero — two-column: giant number left, qualifier right */}
@@ -22,10 +37,10 @@ export default function HomePage() {
               Live permit data
             </p>
             <div className="mt-3 font-heading text-[clamp(3.5rem,8vw,7rem)] font-bold leading-none tracking-tighter tabular-nums">
-              {allPermits.length}
+              {METROS.length}
             </div>
             <p className="mt-2 font-heading text-xl font-medium tracking-tight text-foreground sm:text-2xl">
-              commercial permits tracked across {METROS.length} cities.
+              cities with live commercial permit tracking.
             </p>
           </div>
           <div className="max-w-lg">
@@ -61,7 +76,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 divide-x divide-border sm:grid-cols-4">
             {[
-              { value: formatCurrency(totalValue) + "+", label: "Total pipeline value" },
+              { value: totalCount !== null ? `${totalCount}+` : "...", label: "Permits tracked" },
               { value: `${METROS.length}+`, label: "Cities covered" },
               { value: "24hr", label: "Data refresh" },
               { value: "Free", label: "To browse" },
@@ -103,9 +118,15 @@ export default function HomePage() {
               </Link>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              {recentPermits.map((permit) => (
-                <PermitCard key={permit.id} permit={permit} />
-              ))}
+              {recentPermits.length > 0 ? (
+                recentPermits.map((permit) => (
+                  <PermitCard key={permit.id} permit={permit} />
+                ))
+              ) : (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-40 animate-pulse rounded-lg bg-muted" />
+                ))
+              )}
             </div>
           </div>
         </div>
