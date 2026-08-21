@@ -4588,85 +4588,56 @@ const fortCollins: CityAdapter = {
   },
 };
 
-const planoTX: CityAdapter = {
-  domain: "data.texas.gov",
-  datasetId: "82ee-gbj5",
-  city: "Plano",
-  state: "TX",
-  buildUrl(dateStr: string) {
-    const params = new URLSearchParams({
-      "$where": `situscity='PLANO' AND proprescom='Commercial' AND permitissueddate>'${dateStr}T00:00:00.000'`,
-      "$order": "permitissueddate DESC",
-      "$limit": "200",
-    });
-    return `https://data.texas.gov/resource/82ee-gbj5.json?${params}`;
-  },
-  buildQuery() { return new URLSearchParams(); },
-  toPermit(r, idx) {
-    const desc = r.permitcomments || r.permittypedescr || "";
-    if (!desc) return null;
-    const value = parseFloat(r.permitvalue || "0");
-    const addr = r.situsconcat || r.situsconcatshort || "Plano, TX";
-    return {
-      id: `pln-${r.permitnum || idx}`,
-      permitNumber: r.permitnum || `PLN-${idx}`,
-      address: addr,
-      city: "Plano",
-      state: "TX",
-      zip: r.situszip || "75023",
-      latitude: 33.0198,
-      longitude: -96.6989,
-      filingDate: r.permitissueddate ? r.permitissueddate.split("T")[0] : dateNDaysAgo(0),
-      description: desc,
-      estimatedValue: value || 100000,
-      status: "Issued" as PermitStatus,
-      trades: classifyTrades(desc),
-      gcContact: { companyName: r.permitbuildername || "Unknown Contractor", contactName: null, phone: null, email: null, confidence: (r.permitbuildername ? "Medium" : "Low") as ContactConfidence },
-      source: "data.texas.gov",
-      sourceUpdatedAt: dateNDaysAgo(0),
-    };
-  },
-};
+function makeCollinCADAdapter(cityUpper: string, cityDisplay: string, lat: number, lng: number, zip: string, prefix: string): CityAdapter {
+  return {
+    domain: "data.texas.gov",
+    datasetId: "82ee-gbj5",
+    city: cityDisplay,
+    state: "TX",
+    buildUrl(dateStr: string) {
+      const params = new URLSearchParams({
+        "$where": `situscity='${cityUpper}' AND proprescom='Commercial' AND permitissueddate>'${dateStr}T00:00:00.000'`,
+        "$order": "permitissueddate DESC",
+        "$limit": "200",
+      });
+      return `https://data.texas.gov/resource/82ee-gbj5.json?${params}`;
+    },
+    buildQuery() { return new URLSearchParams(); },
+    toPermit(r, idx) {
+      const desc = r.permitcomments || r.permittypedescr || "";
+      if (!desc) return null;
+      const value = parseFloat(r.permitvalue || "0");
+      const addr = r.situsconcat || r.situsconcatshort || `${cityDisplay}, TX`;
+      return {
+        id: `${prefix}-${r.permitnum || idx}`,
+        permitNumber: r.permitnum || `${prefix.toUpperCase()}-${idx}`,
+        address: addr,
+        city: cityDisplay,
+        state: "TX",
+        zip: r.situszip || zip,
+        latitude: lat,
+        longitude: lng,
+        filingDate: r.permitissueddate ? r.permitissueddate.split("T")[0] : dateNDaysAgo(0),
+        description: desc,
+        estimatedValue: value || 100000,
+        status: "Issued" as PermitStatus,
+        trades: classifyTrades(desc),
+        gcContact: { companyName: r.permitbuildername || "Unknown Contractor", contactName: null, phone: null, email: null, confidence: (r.permitbuildername ? "Medium" : "Low") as ContactConfidence },
+        source: "data.texas.gov",
+        sourceUpdatedAt: dateNDaysAgo(0),
+      };
+    },
+  };
+}
 
-const richardsonTX: CityAdapter = {
-  domain: "data.texas.gov",
-  datasetId: "82ee-gbj5",
-  city: "Richardson",
-  state: "TX",
-  buildUrl(dateStr: string) {
-    const params = new URLSearchParams({
-      "$where": `situscity='RICHARDSON' AND proprescom='Commercial' AND permitissueddate>'${dateStr}T00:00:00.000'`,
-      "$order": "permitissueddate DESC",
-      "$limit": "200",
-    });
-    return `https://data.texas.gov/resource/82ee-gbj5.json?${params}`;
-  },
-  buildQuery() { return new URLSearchParams(); },
-  toPermit(r, idx) {
-    const desc = r.permitcomments || r.permittypedescr || "";
-    if (!desc) return null;
-    const value = parseFloat(r.permitvalue || "0");
-    const addr = r.situsconcat || r.situsconcatshort || "Richardson, TX";
-    return {
-      id: `rch-${r.permitnum || idx}`,
-      permitNumber: r.permitnum || `RCH-${idx}`,
-      address: addr,
-      city: "Richardson",
-      state: "TX",
-      zip: r.situszip || "75080",
-      latitude: 32.9483,
-      longitude: -96.7299,
-      filingDate: r.permitissueddate ? r.permitissueddate.split("T")[0] : dateNDaysAgo(0),
-      description: desc,
-      estimatedValue: value || 100000,
-      status: "Issued" as PermitStatus,
-      trades: classifyTrades(desc),
-      gcContact: { companyName: r.permitbuildername || "Unknown Contractor", contactName: null, phone: null, email: null, confidence: (r.permitbuildername ? "Medium" : "Low") as ContactConfidence },
-      source: "data.texas.gov",
-      sourceUpdatedAt: dateNDaysAgo(0),
-    };
-  },
-};
+const planoTX = makeCollinCADAdapter("PLANO", "Plano", 33.0198, -96.6989, "75023", "pln");
+const richardsonTX = makeCollinCADAdapter("RICHARDSON", "Richardson", 32.9483, -96.7299, "75080", "rch");
+const allenTX = makeCollinCADAdapter("ALLEN", "Allen", 33.1032, -96.6706, "75013", "aln");
+const prosperTX = makeCollinCADAdapter("PROSPER", "Prosper", 33.2362, -96.8011, "75078", "prs");
+const celinaTX = makeCollinCADAdapter("CELINA", "Celina", 33.3248, -96.7847, "75009", "cel");
+const annaTX = makeCollinCADAdapter("ANNA", "Anna", 33.3490, -96.5487, "75409", "ana");
+const wylieTX = makeCollinCADAdapter("WYLIE", "Wylie", 33.0151, -96.5389, "75098", "wyl");
+const melissaTX = makeCollinCADAdapter("MELISSA", "Melissa", 33.2860, -96.5726, "75454", "mel");
 
 const boulderCO: CityAdapter = {
   domain: "services.arcgis.com",
@@ -4858,6 +4829,52 @@ const princetonNJ = makeNJAdapter("PRINCETON (NEW)", "Princeton", 40.3573, -74.6
 const freeholdNJ = makeNJAdapter("FREEHOLD TWP", "Freehold", 40.2601, -74.2736, "07728");
 const fortLeeNJ = makeNJAdapter("FORT LEE", "Fort Lee", 40.8509, -73.9701, "07024");
 const lindenNJ = makeNJAdapter("LINDEN", "Linden", 40.6220, -74.2446, "07036");
+const elizabethNJ = makeNJAdapter("ELIZABETH", "Elizabeth", 40.6639, -74.2107, "07201");
+const hobokenNJ = makeNJAdapter("HOBOKEN", "Hoboken", 40.7440, -74.0324, "07030");
+const camdenNJ = makeNJAdapter("CAMDEN", "Camden", 39.9259, -75.1196, "08101");
+const eastBrunswickNJ = makeNJAdapter("EAST BRUNSWICK", "East Brunswick", 40.4279, -74.4157, "08816");
+const franklinSomersetNJ = makeNJAdapter("FRANKLIN TWP SOMERSET", "Franklin Twp", 40.4862, -74.5410, "08873");
+const lawrenceNJ = makeNJAdapter("LAWRENCE TWP", "Lawrence", 40.2968, -74.7318, "08648");
+const monroeNJ = makeNJAdapter("MONROE TWP", "Monroe Twp", 40.3283, -74.4329, "08831");
+const jacksonNJ = makeNJAdapter("JACKSON", "Jackson", 40.0988, -74.3594, "08527");
+const bloomfieldNJ = makeNJAdapter("BLOOMFIELD", "Bloomfield", 40.8068, -74.1854, "07003");
+const piscatawayNJ = makeNJAdapter("PISCATAWAY", "Piscataway", 40.4862, -74.4390, "08854");
+const hackensackNJ = makeNJAdapter("HACKENSACK", "Hackensack", 40.8859, -74.0435, "07601");
+const bayonneNJ = makeNJAdapter("BAYONNE", "Bayonne", 40.6687, -74.1143, "07002");
+const brickNJ = makeNJAdapter("BRICK", "Brick", 40.0583, -74.1079, "08723");
+const redBankNJ = makeNJAdapter("RED BANK", "Red Bank", 40.3471, -74.0643, "07701");
+const middletownNJ = makeNJAdapter("MIDDLETOWN TWP", "Middletown", 40.3965, -74.1182, "07748");
+const eveshamNJ = makeNJAdapter("EVESHAM", "Evesham", 39.8618, -74.8593, "08053");
+const moorestownNJ = makeNJAdapter("MOORESTOWN", "Moorestown", 39.9687, -74.9487, "08057");
+const wallNJ = makeNJAdapter("WALL TWP", "Wall Twp", 40.1583, -74.0963, "07719");
+const westWindsorNJ = makeNJAdapter("WEST WINDSOR TWP", "West Windsor", 40.2863, -74.6243, "08550");
+const voorheesNJ = makeNJAdapter("VOORHEES TWP", "Voorhees", 39.8443, -74.9527, "08043");
+const fairfieldNJ = makeNJAdapter("FAIRFIELD", "Fairfield NJ", 40.8831, -74.3064, "07004");
+const hanoverNJ = makeNJAdapter("HANOVER", "Hanover", 40.8218, -74.4279, "07981");
+const hillsboroughNJ = makeNJAdapter("HILLSBOROUGH", "Hillsborough", 40.4999, -74.6361, "08844");
+const summitNJ = makeNJAdapter("SUMMIT", "Summit", 40.7157, -74.3571, "07901");
+const eatontownNJ = makeNJAdapter("EATONTOWN", "Eatontown", 40.2901, -74.0510, "07724");
+const southPlainNJ = makeNJAdapter("SOUTH PLAINFIELD", "South Plainfield", 40.5790, -74.4135, "07080");
+const pennsaukenNJ = makeNJAdapter("PENNSAUKEN", "Pennsauken", 39.9562, -75.0580, "08110");
+const tintonFallsNJ = makeNJAdapter("TINTON FALLS", "Tinton Falls", 40.2787, -74.0944, "07724");
+const southBrunswickNJ = makeNJAdapter("SOUTH BRUNSWICK", "South Brunswick", 40.3837, -74.5268, "08852");
+const plainboroNJ = makeNJAdapter("PLAINSBORO", "Plainsboro", 40.3341, -74.5862, "08536");
+const washingtonTwpNJ = makeNJAdapter("WASHINGTON TWP", "Washington Twp NJ", 39.7468, -75.0717, "08012");
+const howellNJ = makeNJAdapter("HOWELL", "Howell", 40.1479, -74.1990, "07731");
+const millburnNJ = makeNJAdapter("MILLBURN", "Millburn", 40.7260, -74.3246, "07041");
+const perthAmboyNJ = makeNJAdapter("PERTH AMBOY", "Perth Amboy", 40.5068, -74.2654, "08861");
+const vinelandNJ = makeNJAdapter("VINELAND", "Vineland", 39.4864, -75.0260, "08360");
+const englewoodNJ = makeNJAdapter("ENGLEWOOD", "Englewood", 40.8929, -73.9726, "07631");
+const teaneckNJ = makeNJAdapter("TEANECK", "Teaneck", 40.8976, -74.0160, "07666");
+const livingstonNJ = makeNJAdapter("LIVINGSTON", "Livingston", 40.7898, -74.3281, "07039");
+const randolphNJ = makeNJAdapter("RANDOLPH", "Randolph", 40.8482, -74.5852, "07869");
+const denvilleNJ = makeNJAdapter("DENVILLE", "Denville", 40.8920, -74.4774, "07834");
+const mahwahNJ = makeNJAdapter("MAHWAH", "Mahwah", 41.0887, -74.1438, "07430");
+const eastWindsorNJ = makeNJAdapter("EAST WINDSOR", "East Windsor", 40.2601, -74.5310, "08520");
+const manalapanNJ = makeNJAdapter("MANALAPAN", "Manalapan", 40.2874, -74.3157, "07726");
+const florhamParkNJ = makeNJAdapter("FLORHAM PARK", "Florham Park", 40.7868, -74.3882, "07932");
+const branchburgNJ = makeNJAdapter("BRANCHBURG", "Branchburg", 40.5682, -74.7001, "08876");
+const springfieldNJ = makeNJAdapter("SPRINGFIELD", "Springfield NJ", 40.6984, -74.3246, "07081");
 
 const bendOR: CityAdapter = {
   domain: "services5.arcgis.com",
@@ -5001,6 +5018,58 @@ const annapolisMD = makeMDBPDSAdapter("Annapolis", "Annapolis", 38.9784, -76.492
 const anneArundelMD = makeMDBPDSAdapter("Anne Arundel County", "Anne Arundel County", 39.0458, -76.6413, "21401");
 const carrollCountyMD = makeMDBPDSAdapter("Carroll County", "Carroll County", 39.5639, -76.9942, "21157");
 const harfordCountyMD = makeMDBPDSAdapter("Harford County", "Harford County", 39.5361, -76.3008, "21014");
+const baltimoreCountyMD = makeMDBPDSAdapter("Baltimore County", "Baltimore County", 39.4015, -76.6101, "21228");
+
+function makeMoCoAdapter(cityUpper: string, cityDisplay: string, lat: number, lng: number, zip: string): CityAdapter {
+  const prefix = cityDisplay.toLowerCase().replace(/[^a-z]/g, "").slice(0, 3);
+  return {
+    domain: "data.montgomerycountymd.gov",
+    datasetId: "7ate-xrxm",
+    city: cityDisplay,
+    state: "MD",
+    buildUrl(dateStr) {
+      const params = new URLSearchParams({
+        "$where": `city='${cityUpper}' AND issueddate >= '${dateStr}T00:00:00.000'`,
+        "$order": "issueddate DESC",
+        "$limit": "200",
+      });
+      return `https://data.montgomerycountymd.gov/resource/7ate-xrxm.json?${params}`;
+    },
+    buildQuery() { return new URLSearchParams(); },
+    toPermit(r, idx) {
+      const desc = r.description || r.worktype || "";
+      if (isLikelyResidential(desc)) return null;
+      const value = parseFloat(r.declaredvaluation || "0");
+      if (value > 0 && value < 10000) return null;
+      const addr = [r.stno, r.stname, r.suffix].filter(Boolean).join(" ") || `${cityDisplay}, MD`;
+      const rlat = parseFloat(r.latitude || "0");
+      const rlng = parseFloat(r.longitude || "0");
+      return {
+        id: `mc${prefix}-${r.permitno || idx}`,
+        permitNumber: r.permitno || `MC-${prefix.toUpperCase()}-${idx}`,
+        address: `${addr}, ${cityDisplay}, MD ${r.zip || zip}`,
+        city: cityDisplay,
+        state: "MD",
+        zip: r.zip || zip,
+        latitude: rlat > 1 ? rlat : lat,
+        longitude: rlng < -1 ? rlng : lng,
+        filingDate: r.issueddate ? r.issueddate.split("T")[0] : dateNDaysAgo(0),
+        description: desc || "Commercial construction",
+        estimatedValue: value || 100000,
+        status: mapStatus(r.status),
+        trades: classifyTrades(desc),
+        gcContact: { companyName: "Unknown Contractor", contactName: null, phone: null, email: null, confidence: "Low" as ContactConfidence },
+        source: "data.montgomerycountymd.gov",
+        sourceUpdatedAt: dateNDaysAgo(0),
+      };
+    },
+  };
+}
+
+const rockvilleMD = makeMoCoAdapter("ROCKVILLE", "Rockville", 39.0840, -77.1528, "20850");
+const silverSpringMD = makeMoCoAdapter("SILVER SPRING", "Silver Spring", 38.9907, -77.0261, "20910");
+const bethesdaMD = makeMoCoAdapter("BETHESDA", "Bethesda", 38.9807, -77.1003, "20814");
+const gaithersburgMD = makeMoCoAdapter("GAITHERSBURG", "Gaithersburg", 39.1434, -77.2014, "20877");
 
 const collegeStationTX: CityAdapter = {
   domain: "data.cstx.gov",
@@ -5398,6 +5467,63 @@ export const METRO_ADAPTERS: Record<string, CityAdapter[]> = {
   charlottesville: [charlottesvilleVA],
   "sonoma-county": [sonomaCountyCA],
   alpharetta: [alpharettaGA],
+  elizabeth: [elizabethNJ],
+  hoboken: [hobokenNJ],
+  camden: [camdenNJ],
+  "east-brunswick": [eastBrunswickNJ],
+  "franklin-twp": [franklinSomersetNJ],
+  "lawrence-nj": [lawrenceNJ],
+  "monroe-twp": [monroeNJ],
+  "jackson-nj": [jacksonNJ],
+  bloomfield: [bloomfieldNJ],
+  piscataway: [piscatawayNJ],
+  hackensack: [hackensackNJ],
+  bayonne: [bayonneNJ],
+  brick: [brickNJ],
+  "red-bank": [redBankNJ],
+  middletown: [middletownNJ],
+  evesham: [eveshamNJ],
+  moorestown: [moorestownNJ],
+  "wall-twp": [wallNJ],
+  "west-windsor": [westWindsorNJ],
+  voorhees: [voorheesNJ],
+  "fairfield-nj": [fairfieldNJ],
+  hanover: [hanoverNJ],
+  hillsborough: [hillsboroughNJ],
+  "summit-nj": [summitNJ],
+  eatontown: [eatontownNJ],
+  "south-plainfield": [southPlainNJ],
+  pennsauken: [pennsaukenNJ],
+  "tinton-falls": [tintonFallsNJ],
+  "south-brunswick": [southBrunswickNJ],
+  plainsboro: [plainboroNJ],
+  "washington-twp-nj": [washingtonTwpNJ],
+  howell: [howellNJ],
+  millburn: [millburnNJ],
+  "perth-amboy": [perthAmboyNJ],
+  allen: [allenTX],
+  prosper: [prosperTX],
+  celina: [celinaTX],
+  "anna-tx": [annaTX],
+  wylie: [wylieTX],
+  melissa: [melissaTX],
+  "baltimore-county": [baltimoreCountyMD],
+  rockville: [rockvilleMD],
+  "silver-spring": [silverSpringMD],
+  bethesda: [bethesdaMD],
+  gaithersburg: [gaithersburgMD],
+  vineland: [vinelandNJ],
+  englewood: [englewoodNJ],
+  teaneck: [teaneckNJ],
+  livingston: [livingstonNJ],
+  randolph: [randolphNJ],
+  denville: [denvilleNJ],
+  mahwah: [mahwahNJ],
+  "east-windsor": [eastWindsorNJ],
+  manalapan: [manalapanNJ],
+  "florham-park": [florhamParkNJ],
+  branchburg: [branchburgNJ],
+  "springfield-nj": [springfieldNJ],
 };
 
 export async function fetchAdapter(adapter: CityAdapter, dateStr: string): Promise<Permit[]> {
