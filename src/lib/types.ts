@@ -370,12 +370,31 @@ export type LeadStatus =
   | "Not Relevant"
   | "Won";
 
+/** What a viewer can be told exists, independently of whether they may see it. */
+export interface ContactAvailability {
+  companyName: boolean;
+  contactName: boolean;
+  phone: boolean;
+  email: boolean;
+}
+
 export interface GCContact {
   companyName: string;
   contactName: string | null;
   phone: string | null;
   email: string | null;
   confidence: ContactConfidence;
+  /**
+   * Set by the API, never by an adapter. `true` means the value fields above
+   * were emptied because the viewer is not entitled to contact details — the
+   * client is not hiding anything, it was never sent anything.
+   */
+  locked?: boolean;
+  /**
+   * Which fields the source actually holds. Present on both locked and
+   * unlocked contacts so the paywall can describe what is behind it honestly.
+   */
+  available?: ContactAvailability;
 }
 
 export interface Permit {

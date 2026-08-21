@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,14 +19,12 @@ import {
   Bell,
   Download,
   Crown,
-  Check,
   MapPin,
   Search,
 } from "lucide-react";
 import { useAuth, type Plan } from "@/lib/auth-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLeads } from "@/lib/leads-context";
-import { usePermits } from "@/lib/permits-context";
 import { formatCurrency } from "@/lib/format";
 import { TRADES, METROS, type LeadStatus, type Trade } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -96,16 +94,45 @@ const PLAN_LABELS: Record<Plan, string> = {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, isPaid, updateUser, isLoading } = useAuth();
-  const { leads, removeLead, updateLeadStatus, updateLeadNotes, exportCSV } =
-    useLeads();
-  const { permits } = usePermits();
+  const searchParams = useSearchParams();
+  const { user, isPaid, updateUser, refreshProfile, isLoading } = useAuth();
+  const {
+    leads,
+    isLoading: leadsLoading,
+    error: leadsError,
+    clearError,
+    removeLead,
+    updateLeadStatus,
+    updateLeadNotes,
+    exportCSV,
+  } = useLeads();
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [notesDraft, setNotesDraft] = useState("");
+  const [billingBusy, setBillingBusy] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !user) router.replace("/login");
   }, [isLoading, user, router]);
+
+  // Stripe redirects back here the moment Checkout completes, which is usually
+  // before the webhook lands. Reconcile once so the user is not shown "free"
+  // seconds after paying.
+  const checkoutStatus = searchParams.get("checkout");
+  useEffect(() => {
+    if (checkoutStatus !== "success") return;
+    let cancelled = false;
+    fetch("/api/billing/reconcile", { method: "POST" })
+      .then(() => {
+        if (!cancelled) return refreshProfile();
+      })
+      .catch(() => {
+        // The webhook is the durable path; a failure here only delays the UI.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [checkoutStatus, refreshProfile]);
 
   if (isLoading || !user) {
     return (
@@ -155,12 +182,9 @@ export default function DashboardPage() {
     );
   }
 
-  const savedPermits = leads
-    .map((lead) => ({
-      lead,
-      permit: permits.find((p) => p.id === lead.permitId),
-    }))
-    .filter((item) => item.permit !== undefined);
+  // Each lead arrives from /api/leads with its permit already attached, so the
+  // list no longer depends on what the browse view happens to be holding.
+  const savedPermits = leads.map((lead) => ({ lead, permit: lead.permit }));
 
   const totalValue = savedPermits.reduce(
     (sum, { permit }) => sum + (permit?.estimatedValue ?? 0),
@@ -178,14 +202,47 @@ export default function DashboardPage() {
   }
 
   function handleNotesBlur(permitId: string) {
-    updateLeadNotes(permitId, notesDraft);
+    void updateLeadNotes(permitId, notesDraft);
     setEditingNotes(null);
   }
 
-  function handleStartTrial() {
-    const trialEnd = new Date();
-    trialEnd.setDate(trialEnd.getDate() + 7);
-    updateUser({ plan: "paid", trialEndsAt: trialEnd.toISOString() });
+  /**
+   * Trials start in Stripe, never in the browser. The previous version wrote
+   * `plan: "paid"` straight to the profile, which meant anyone could grant
+   * themselves the paid tier from the client.
+   */
+  async function handleStartTrial() {
+    setBillingBusy(true);
+    try {
+      const res = await fetch("/api/checkout", { method: "POST" });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      setBillingError(data.error ?? "Could not start checkout");
+    } catch {
+      setBillingError("Could not reach checkout. Please try again.");
+    } finally {
+      setBillingBusy(false);
+    }
+  }
+
+  async function handleManageBilling() {
+    setBillingBusy(true);
+    try {
+      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+      setBillingError(data.error ?? "Could not open the billing portal");
+    } catch {
+      setBillingError("Could not reach the billing portal. Please try again.");
+    } finally {
+      setBillingBusy(false);
+    }
   }
 
   return (
@@ -272,8 +329,32 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* Mutation and load failures. Silent failure is what this replaces:
+              a rejected write used to leave the row looking saved. */}
+          {leadsError && (
+            <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2.5">
+              <span className="text-sm text-destructive">{leadsError}</span>
+              <button
+                onClick={clearError}
+                className="shrink-0 text-xs font-medium text-destructive hover:underline"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
           {/* Lead list */}
-          {savedPermits.length === 0 ? (
+          {leadsLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="rounded-lg border p-4">
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="mt-2 h-3 w-1/3" />
+                  <Skeleton className="mt-3 h-5 w-40 rounded-full" />
+                </div>
+              ))}
+            </div>
+          ) : savedPermits.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed px-4 py-16 text-center">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
                 <Search className="h-5 w-5 text-muted-foreground" />
@@ -303,20 +384,32 @@ export default function DashboardPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1 space-y-2.5">
                         {/* Address and city */}
-                        <div>
-                          <Link
-                            href={`/permits/${permit!.id}`}
-                            className="text-sm font-semibold hover:underline"
-                          >
-                            {permit!.address}
-                          </Link>
-                          <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                            <MapPin className="h-3 w-3 shrink-0" />
-                            <span>
-                              {permit!.city}, {permit!.state}
-                            </span>
+                        {permit ? (
+                          <div>
+                            <Link
+                              href={`/permits/${permit.id}`}
+                              className="text-sm font-semibold hover:underline"
+                            >
+                              {permit.address}
+                            </Link>
+                            <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                              <MapPin className="h-3 w-3 shrink-0" />
+                              <span>
+                                {permit.city}, {permit.state}
+                              </span>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div>
+                            <p className="text-sm font-semibold">
+                              Permit record unavailable
+                            </p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              The source stopped publishing this permit. Your
+                              status and notes are kept.
+                            </p>
+                          </div>
+                        )}
 
                         {/* Status buttons */}
                         <div className="flex flex-wrap items-center gap-1">
@@ -324,7 +417,7 @@ export default function DashboardPage() {
                             <button
                               key={opt.value}
                               onClick={() =>
-                                updateLeadStatus(lead.permitId, opt.value)
+                                void updateLeadStatus(lead.permitId, opt.value)
                               }
                               className={cn(
                                 "rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
@@ -339,8 +432,9 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Trades */}
+                        {permit && (
                         <div className="flex flex-wrap gap-1">
-                          {permit!.trades.map((trade) => (
+                          {permit.trades.map((trade) => (
                             <span
                               key={trade}
                               className={cn(
@@ -353,17 +447,19 @@ export default function DashboardPage() {
                             </span>
                           ))}
                         </div>
+                        )}
 
                         {/* Metadata row */}
+                        {permit && (
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground tabular-nums">
                           <span className="flex items-center gap-1">
                             <DollarSign className="h-3 w-3" />
-                            {formatCurrency(permit!.estimatedValue)}
+                            {formatCurrency(permit.estimatedValue)}
                           </span>
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             Filed{" "}
-                            {new Date(permit!.filingDate).toLocaleDateString(
+                            {new Date(permit.filingDate).toLocaleDateString(
                               "en-US",
                               {
                                 month: "short",
@@ -373,9 +469,10 @@ export default function DashboardPage() {
                             )}
                           </span>
                           <span className="text-muted-foreground/60">
-                            #{permit!.permitNumber}
+                            #{permit.permitNumber}
                           </span>
                         </div>
+                        )}
 
                         {/* Notes — auto-saves on blur */}
                         {editingNotes === lead.permitId ? (
@@ -407,41 +504,50 @@ export default function DashboardPage() {
                         )}
 
                         {/* GC contact */}
-                        {isPaid ? (
-                          <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
-                            <Building2 className="h-3 w-3" />
-                            <span>{permit!.gcContact.companyName}</span>
-                            {permit!.gcContact.phone && (
-                              <>
-                                <span className="text-muted-foreground">
-                                  &middot;
-                                </span>
-                                <span>{permit!.gcContact.phone}</span>
-                              </>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-xs text-primary">
-                            <Lock className="h-3 w-3" />
-                            <span>GC contact locked</span>
-                            <span className="text-muted-foreground">
-                              &middot;
-                            </span>
-                            <button
-                              onClick={handleStartTrial}
-                              className="font-medium hover:underline"
-                            >
-                              Start trial to unlock
-                            </button>
-                          </div>
-                        )}
+                        {permit &&
+                          (permit.gcContact.locked ? (
+                            <div className="flex items-center gap-1.5 text-xs text-primary">
+                              <Lock className="h-3 w-3" />
+                              <span>
+                                {permit.gcContact.available?.companyName
+                                  ? "GC contact locked"
+                                  : "No GC named on this permit"}
+                              </span>
+                              {permit.gcContact.available?.companyName && (
+                                <>
+                                  <span className="text-muted-foreground">
+                                    &middot;
+                                  </span>
+                                  <button
+                                    onClick={handleStartTrial}
+                                    className="font-medium hover:underline"
+                                  >
+                                    Start trial to unlock
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+                              <Building2 className="h-3 w-3" />
+                              <span>{permit.gcContact.companyName}</span>
+                              {permit.gcContact.phone && (
+                                <>
+                                  <span className="text-muted-foreground">
+                                    &middot;
+                                  </span>
+                                  <span>{permit.gcContact.phone}</span>
+                                </>
+                              )}
+                            </div>
+                          ))}
                       </div>
 
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 shrink-0"
-                        onClick={() => removeLead(lead.permitId)}
+                        onClick={() => void removeLead(lead.permitId)}
                       >
                         <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
                       </Button>
@@ -461,7 +567,7 @@ export default function DashboardPage() {
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {isPaid
-                  ? `Export ${leads.length} saved leads with full GC contacts`
+                  ? `Export all ${leads.length} saved leads with full GC contacts`
                   : "Available on paid plans"}
               </p>
             </div>
@@ -469,7 +575,7 @@ export default function DashboardPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => exportCSV(permits)}
+                onClick={() => void exportCSV()}
                 disabled={leads.length === 0}
               >
                 <Download className="mr-1 h-3.5 w-3.5" />
@@ -516,43 +622,42 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Plan simulator */}
-            <Card className="gap-0 border-blue-200 bg-blue-50/50 py-0 dark:border-blue-800 dark:bg-blue-950/20">
+            <Card className="gap-0 py-0">
               <CardContent className="p-5">
-                <h3 className="text-sm font-semibold">
-                  Plan Simulator (Dev Mode)
-                </h3>
+                <h3 className="text-sm font-semibold">Billing</h3>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Switch plans to test the paywall experience
+                  {isPaid
+                    ? "Update your payment method, download invoices, or cancel."
+                    : "Start a 7-day free trial through Stripe. Cancel any time."}
                 </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {(["free", "paid"] as Plan[]).map(
-                    (plan) => (
-                      <Button
-                        key={plan}
-                        size="sm"
-                        variant={user.plan === plan ? "default" : "outline"}
-                        className="text-xs"
-                        onClick={() => {
-                          if (plan === "free") {
-                            updateUser({ plan, trialEndsAt: null });
-                          } else {
-                            const trial = new Date();
-                            trial.setDate(trial.getDate() + 7);
-                            updateUser({
-                              plan,
-                              trialEndsAt: trial.toISOString(),
-                            });
-                          }
-                        }}
-                      >
-                        {plan === user.plan && (
-                          <Check className="mr-1 h-3 w-3" />
-                        )}
-                        {plan.charAt(0).toUpperCase() + plan.slice(1)}
-                      </Button>
-                    )
-                  )}
+                {user.cancelAtPeriodEnd && user.currentPeriodEnd && (
+                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+                    Access ends{" "}
+                    {new Date(user.currentPeriodEnd).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                    .
+                  </p>
+                )}
+                {billingError && (
+                  <p className="mt-2 text-xs text-destructive">{billingError}</p>
+                )}
+                <div className="mt-3">
+                  <Button
+                    size="sm"
+                    variant={isPaid ? "outline" : "default"}
+                    className="text-xs"
+                    disabled={billingBusy}
+                    onClick={isPaid ? handleManageBilling : handleStartTrial}
+                  >
+                    {billingBusy
+                      ? "Opening Stripe\u2026"
+                      : isPaid
+                        ? "Manage billing"
+                        : "Start 7-day free trial"}
+                  </Button>
                 </div>
               </CardContent>
             </Card>

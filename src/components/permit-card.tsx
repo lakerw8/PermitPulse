@@ -48,9 +48,9 @@ export function PermitCard({ permit, showLockedContact = true }: PermitCardProps
       return;
     }
     if (saved) {
-      removeLead(permit.id);
+      void removeLead(permit.id);
     } else if (canSaveMore(isPaid)) {
-      saveLead(permit.id);
+      void saveLead(permit.id);
     }
   }
 
@@ -121,23 +121,26 @@ export function PermitCard({ permit, showLockedContact = true }: PermitCardProps
           </span>
         </div>
 
-        {showLockedContact && !isPaid && (
+        {showLockedContact && permit.gcContact.locked && (
           <div className="flex items-center gap-2 rounded-md border border-dashed border-border bg-muted/50 px-3 py-2">
             <Lock className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground">
-              <span className="blur-[4px] select-none" aria-hidden>
-                {permit.gcContact.companyName.slice(0, 8)}
-              </span>
-              {"... "}
-              <span className="text-primary">
-                Unlock GC contact
-              </span>
+              {permit.gcContact.available?.companyName ? (
+                <>
+                  GC named
+                  {permit.gcContact.available.phone && " · phone on file"}
+                  {". "}
+                  <span className="text-primary">Unlock contact</span>
+                </>
+              ) : (
+                "No GC named on this permit"
+              )}
             </span>
             <Building2 className="ml-auto h-3.5 w-3.5 text-muted-foreground/60" />
           </div>
         )}
 
-        {showLockedContact && isPaid && (
+        {showLockedContact && !permit.gcContact.locked && (
           <div className="flex items-center gap-2 rounded-md border border-primary/25 bg-primary/8 px-3 py-2">
             <Building2 className="h-3.5 w-3.5 text-primary" />
             <span className="text-xs font-medium text-primary">

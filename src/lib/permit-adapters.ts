@@ -5326,7 +5326,7 @@ const alpharettaGA: CityAdapter = {
 export const METRO_ADAPTERS: Record<string, CityAdapter[]> = {
   chicago: [chicago],
   austin: [austin],
-  "sf-bay-area": [sanFrancisco, marinCounty, sanJose],
+  "san-francisco": [sanFrancisco, marinCounty, sanJose],
   seattle: [seattle],
   "new-york": [newYork],
   philadelphia: [philadelphia],

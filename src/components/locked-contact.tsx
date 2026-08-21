@@ -15,11 +15,17 @@ import { GCContact } from "@/lib/types";
 
 interface LockedContactProps {
   contact: GCContact;
-  isUnlocked?: boolean;
 }
 
-export function LockedContact({ contact, isUnlocked = false }: LockedContactProps) {
-  if (isUnlocked) {
+/**
+ * Renders whichever state the server put in the payload.
+ *
+ * There is deliberately no `isUnlocked` prop any more. The API decides what a
+ * viewer receives; if `locked` is set, the values are simply not here to show.
+ * A component-level flag could only ever disagree with the data.
+ */
+export function LockedContact({ contact }: LockedContactProps) {
+  if (!contact.locked) {
     return (
       <Card className="gap-0 border-green-200 bg-green-50/50 py-0 dark:border-green-800 dark:bg-green-950/20">
         <CardContent className="p-4 sm:p-5">
@@ -64,61 +70,89 @@ export function LockedContact({ contact, isUnlocked = false }: LockedContactProp
     );
   }
 
+  // The server sends no contact values to an unentitled viewer, only which
+  // fields exist. Say that plainly instead of blurring an invented phone
+  // number: a prospect deciding whether to pay should know whether this
+  // permit actually carries a phone, and a permit with no GC on record should
+  // not look like one that does.
+  const available = contact.available;
+  const present: string[] = [];
+  if (available?.companyName) present.push("company name");
+  if (available?.contactName) present.push("contact name");
+  if (available?.phone) present.push("phone");
+  if (available?.email) present.push("email");
+
   return (
     <Card className="gap-0 border-border bg-muted/30 py-0">
       <CardContent className="p-4 sm:p-5">
         <div className="mb-3 flex items-center gap-2">
           <Lock className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold">General Contractor Contact</h3>
+          <Badge variant="outline" className="ml-auto text-xs">
+            {contact.confidence} confidence
+          </Badge>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-sm">
-              <span className="blur-[5px] select-none" aria-hidden>
-                {contact.companyName}
+        {present.length > 0 ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                {available?.companyName
+                  ? "General contractor named on this permit"
+                  : "No company name on this permit"}
               </span>
-            </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                {available?.phone
+                  ? "Phone number on file"
+                  : "No phone number on file"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                {available?.email
+                  ? "Email address on file"
+                  : "No email address on file"}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <User className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-sm blur-[5px] select-none" aria-hidden>
-              John Smith
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-sm blur-[5px] select-none" aria-hidden>
-              (312) 555-0000
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-sm blur-[5px] select-none" aria-hidden>
-              contact@company.com
-            </span>
-          </div>
-        </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            This permit record does not name a general contractor. Unlocking
+            will not reveal contact details for it.
+          </p>
+        )}
 
-        <div className="mt-4 rounded-lg border border-border bg-background p-3">
-          <p className="text-sm font-medium">
-            Unlock GC contact details to reach out before your competitors
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Get the company name, contact person, phone, and email with a paid plan.
-          </p>
-          <div className="mt-3 flex gap-2">
-            <Button size="sm" nativeButton={false} render={<Link href="/pricing" />}>
-              Start 7-Day Free Trial
-              <ArrowRight className="ml-1 h-3.5 w-3.5" />
-            </Button>
-            <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/pricing" />}>
-              View Plans
-            </Button>
+        {present.length > 0 && (
+          <div className="mt-4 rounded-lg border border-border bg-background p-3">
+            <p className="text-sm font-medium">
+              Unlock the {formatList(present)} for this permit
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Paid plans reveal every contact detail we hold, on every permit.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Button size="sm" nativeButton={false} render={<Link href="/pricing" />}>
+                Start 7-Day Free Trial
+                <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </Button>
+              <Button variant="outline" size="sm" nativeButton={false} render={<Link href="/pricing" />}>
+                View Plans
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </CardContent>
     </Card>
   );
+}
+
+/** "company name, phone and email" */
+function formatList(items: string[]): string {
+  if (items.length === 1) return items[0];
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }

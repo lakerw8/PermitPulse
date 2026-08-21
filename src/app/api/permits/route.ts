@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import type { Permit, Trade, PermitStatus, ContactConfidence } from "@/lib/types";
 import { supabaseAdmin } from "@/lib/supabase";
 import { fetchLivePermits, dateNDaysAgo } from "@/lib/permit-adapters";
+import { getViewer } from "@/lib/entitlements-server";
+import { applyEntitlement } from "@/lib/entitlements";
+import { mapRowToPermit, selectColumns } from "@/lib/permit-columns";
 import {
   parseQuery,
   applyQuery,
@@ -10,33 +12,6 @@ import {
 } from "@/lib/permit-query";
 
 const MAX_PAGE_SIZE = 100;
-
-function mapRowToPermit(row: Record<string, unknown>): Permit {
-  return {
-    id: row.id as string,
-    permitNumber: row.permit_number as string,
-    address: row.address as string,
-    city: row.city as string,
-    state: row.state as string,
-    zip: row.zip as string,
-    latitude: row.latitude as number,
-    longitude: row.longitude as number,
-    filingDate: row.filing_date as string,
-    description: row.description as string,
-    estimatedValue: Number(row.estimated_value),
-    status: (row.status as PermitStatus) || "Issued",
-    trades: (row.trades as Trade[]) || [],
-    gcContact: {
-      companyName: (row.gc_company_name as string) || "Unknown Contractor",
-      contactName: (row.gc_contact_name as string) || null,
-      phone: (row.gc_phone as string) || null,
-      email: (row.gc_email as string) || null,
-      confidence: ((row.gc_confidence as string) || "Low") as ContactConfidence,
-    },
-    source: row.source as string,
-    sourceUpdatedAt: (row.source_updated_at as string) || "",
-  };
-}
 
 /**
  * PostgREST reads `or=(...)` as a comma-separated list, so a comma, paren or
@@ -47,6 +22,11 @@ function sanitizeSearch(term: string): string {
 }
 
 export async function GET(request: NextRequest) {
+  // Resolved before any data is read so both the cache and the live path share
+  // one answer. Anonymous and free viewers never get the contact columns
+  // selected on their behalf, let alone serialized.
+  const { entitled } = await getViewer();
+
   const params = request.nextUrl.searchParams;
   const query = parseQuery(params);
   const source = params.get("source");
@@ -87,7 +67,7 @@ export async function GET(request: NextRequest) {
       if (cachedCount && cachedCount > 0) {
         let builder = supabaseAdmin
           .from("permits")
-          .select("*", { count: "exact" })
+          .select(selectColumns(entitled), { count: "exact" })
           .in("metro", query.metros)
           .gte("filing_date", cutoff);
 
@@ -129,7 +109,9 @@ export async function GET(request: NextRequest) {
         if (!error && data) {
           const total = count ?? data.length;
           return NextResponse.json({
-            permits: data.map(mapRowToPermit),
+            permits: (data as unknown as Record<string, unknown>[]).map((row) =>
+              mapRowToPermit(row, entitled)
+            ),
             total,
             offset,
             hasMore: offset + data.length < total,
@@ -144,8 +126,10 @@ export async function GET(request: NextRequest) {
 
   try {
     const permits = await fetchLivePermits(query.metros, query.days);
+    const result = applyQuery(permits, query, cutoff, page);
     return NextResponse.json({
-      ...applyQuery(permits, query, cutoff, page),
+      ...result,
+      permits: result.permits.map((permit) => applyEntitlement(permit, entitled)),
       source: "live",
     } satisfies PermitPage);
   } catch {

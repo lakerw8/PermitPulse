@@ -1,16 +1,17 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { LockedContact } from "@/components/locked-contact";
-import { usePermits } from "@/lib/permits-context";
 import { useAuth } from "@/lib/auth-context";
 import { useLeads } from "@/lib/leads-context";
 import { formatFullCurrency } from "@/lib/format";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { Permit } from "@/lib/types";
 import {
   ArrowLeft,
   MapPin,
@@ -51,19 +52,67 @@ export default function PermitDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { permits } = usePermits();
   const { user, isPaid } = useAuth();
-  const { isLeadSaved, saveLead, removeLead, canSaveMore } = useLeads();
+  const { isLeadSaved, saveLead, removeLead, canSaveMore, error } = useLeads();
 
-  const permit = permits.find((p) => p.id === id);
+  // Fetched by id rather than read from the browse list. The page previously
+  // looked the permit up in `PermitsContext`, so a bookmarked or shared link
+  // showed "Permit not found" in any session that had not already browsed to
+  // it — including a plain reload of this page.
+  const [permit, setPermit] = useState<Permit | null>(null);
+  const [state, setState] = useState<"loading" | "ready" | "missing" | "error">(
+    "loading"
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    fetch(`/api/permits/${encodeURIComponent(id)}`, { signal: controller.signal })
+      .then(async (res) => {
+        if (res.status === 404) {
+          setState("missing");
+          return;
+        }
+        if (!res.ok) throw new Error(`Request failed (${res.status})`);
+        const data = (await res.json()) as { permit: Permit };
+        setPermit(data.permit);
+        setState("ready");
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setState("error");
+      });
+
+    return () => controller.abort();
+  }, [id]);
+
   const saved = permit ? isLeadSaved(permit.id) : false;
 
-  if (!permit) {
+  if (state === "loading") {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <Skeleton className="mb-4 h-8 w-32" />
+        <Skeleton className="h-7 w-2/3" />
+        <Skeleton className="mt-2 h-4 w-40" />
+        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  if (state !== "ready" || !permit) {
+    const unavailable = state === "error";
     return (
       <div className="mx-auto max-w-4xl px-4 py-16 text-center">
-        <h1 className="text-xl font-bold">Permit not found</h1>
+        <h1 className="text-xl font-bold">
+          {unavailable ? "Permit temporarily unavailable" : "Permit not found"}
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          This permit may have been removed or the ID is invalid.
+          {unavailable
+            ? "We could not reach the permit record just now. Please try again in a moment."
+            : "This permit may have been removed, or it has not been cached yet."}
         </p>
         <Button variant="outline" className="mt-4" onClick={() => router.push("/permits")}>
           <ArrowLeft className="mr-1 h-4 w-4" />
@@ -76,11 +125,11 @@ export default function PermitDetailPage({
   function handleSaveToggle() {
     if (!permit) return;
     if (saved) {
-      removeLead(permit.id);
+      void removeLead(permit.id);
     } else if (!user) {
       router.push("/login");
     } else if (canSaveMore(isPaid)) {
-      saveLead(permit.id);
+      void saveLead(permit.id);
     }
   }
 
@@ -123,6 +172,12 @@ export default function PermitDetailPage({
           </Button>
         </div>
       </div>
+
+      {error && (
+        <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+          {error}
+        </p>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
@@ -182,7 +237,7 @@ export default function PermitDetailPage({
             </CardContent>
           </Card>
 
-          <LockedContact contact={permit.gcContact} isUnlocked={isPaid} />
+          <LockedContact contact={permit.gcContact} />
         </div>
 
         <div className="space-y-4">
