@@ -173,7 +173,7 @@ describe("fetchSavedLeads", () => {
 
     const result = await fetchSavedLeads("user-1", false);
 
-    expect(result[0].permit?.phone).toBeUndefined();
+    expect((result[0].permit as unknown as Record<string, unknown>)?.phone).toBeUndefined();
     expect(result[0].permit?.gcContact.phone).toBeNull();
     expect(result[0].permit?.gcContact.locked).toBe(true);
     expect(JSON.stringify(result)).not.toContain("555-0142");
