@@ -6,9 +6,14 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Check, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import {
+  CITY_COUNT_LABEL,
+  MARKET_COUNT_LABEL,
+  TRADE_COUNT_LABEL,
+} from "@/lib/coverage";
 
 const FREE_FEATURES = [
-  "Browse all permits across 50+ metros",
+  `Browse all permits across ${CITY_COUNT_LABEL}`,
   "Filter by trade, value & status",
   "Save up to 5 leads",
 ];
@@ -16,7 +21,7 @@ const FREE_FEATURES = [
 const PAID_FEATURES = [
   "Full GC name, phone & email",
   "Unlimited saved leads",
-  "All metros & trade filters",
+  "All cities & trade filters",
   "Weekly email digest with GC details",
   "CSV export",
 ];
@@ -40,7 +45,7 @@ const FAQS = [
   },
   {
     q: "What cities do you cover?",
-    a: "50+ metros across the US including Chicago, Austin, San Francisco, Seattle, New York, and many more.",
+    a: `${CITY_COUNT_LABEL} across ${MARKET_COUNT_LABEL} in the US, including Chicago, Austin, San Francisco, Seattle, New York, and many more.`,
   },
 ];
 
@@ -234,8 +239,8 @@ export default function PricingPage() {
           <span className="font-medium text-foreground">
             Every account includes
           </span>{" "}
-          Full permit history &middot; 50+ metros &middot; 10 trade categories
-          &middot; Daily data refresh
+          Full permit history &middot; {CITY_COUNT_LABEL} &middot;{" "}
+          {TRADE_COUNT_LABEL} &middot; Daily data refresh
         </p>
       </div>
 
