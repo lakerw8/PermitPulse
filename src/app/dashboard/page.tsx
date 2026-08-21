@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -93,6 +93,14 @@ const PLAN_LABELS: Record<Plan, string> = {
 };
 
 export default function DashboardPage() {
+  return (
+    <Suspense>
+      <DashboardContent />
+    </Suspense>
+  );
+}
+
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isPaid, updateUser, refreshProfile, isLoading } = useAuth();
@@ -711,18 +719,15 @@ export default function DashboardPage() {
               <CardContent className="p-5">
                 <div className="flex items-center gap-2">
                   <Bell className="h-4 w-4" />
-                  <h3 className="text-sm font-semibold">Email Digest</h3>
+                  <h3 className="text-sm font-semibold">Alerts</h3>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Weekly digest for{" "}
+                  Email alerts for{" "}
                   {METROS.find((m) => m.id === user.metro)?.label || user.metro}
-                  {user.primaryTrade && ` · ${user.primaryTrade}`}
+                  {user.primaryTrade && ` · ${user.primaryTrade}`} are not
+                  available yet. The preferences above are saved and will be used
+                  when they launch.
                 </p>
-                {!isPaid && (
-                  <p className="mt-2 text-xs text-primary">
-                    GC contact details in digest require a paid plan
-                  </p>
-                )}
               </CardContent>
             </Card>
           </div>
