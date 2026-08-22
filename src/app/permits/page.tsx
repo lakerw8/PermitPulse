@@ -8,6 +8,8 @@ import { RegionPicker } from "@/components/region-picker";
 import { usePermits } from "@/lib/permits-context";
 import { countActiveFilters } from "@/lib/permit-query";
 import { summarizeSelection } from "@/lib/regions";
+import { useCoverage, freshnessLabel } from "@/lib/use-coverage";
+import { METROS } from "@/lib/types";
 import { RefreshCw, SearchX, MapPinned, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -26,8 +28,11 @@ export default function PermitsPage() {
     setSearchInput,
     loadMore,
     refresh,
-    lastUpdated,
+    degraded,
+    coverage: selectionCoverage,
+    freshness,
   } = usePermits();
+  const coverage = useCoverage();
 
   const summary = useMemo(() => summarizeSelection(query.metros), [query.metros]);
   const activeFilters = countActiveFilters(query);
@@ -90,17 +95,51 @@ export default function PermitsPage() {
             </>
           )}
         </div>
-        {!isLoading && lastUpdated && (
+        {!isLoading && (
           <p
             className="text-xs tabular-nums text-muted-foreground"
             suppressHydrationWarning
           >
             {permits.length < total &&
               `Showing ${permits.length.toLocaleString()} · `}
-            Updated {lastUpdated.toLocaleTimeString()}
+            {/* When the city portals were last read, not when this browser
+                last fetched. The page used to print the local fetch time,
+                which made a week-old cache look seconds old. */}
+            {freshness
+              ? `Sources refreshed ${freshnessLabel(freshness.lastSuccessAt)}`
+              : coverage
+                ? `Sources refreshed ${freshnessLabel(coverage.lastSuccessfulRefresh)}`
+                : "Checking source freshness\u2026"}
           </p>
         )}
       </div>
+
+      {/* Says why a list is short. Without this, "no coverage", "sources are
+          down" and "this market is quiet" all render as an empty page. */}
+      {degraded && (
+        <p
+          className={
+            degraded.reason === "sources_unavailable"
+              ? "mt-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive"
+              : "mt-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+          }
+        >
+          {degraded.message}
+          {selectionCoverage && selectionCoverage.unsupported.length > 0 && (
+            <>
+              {" "}
+              Not yet covered:{" "}
+              {selectionCoverage.unsupported
+                .map((id) => METROS.find((m) => m.id === id)?.label ?? id)
+                .slice(0, 6)
+                .join(", ")}
+              {selectionCoverage.unsupported.length > 6 &&
+                ` and ${selectionCoverage.unsupported.length - 6} more`}
+              .
+            </>
+          )}
+        </p>
+      )}
 
       <div className="mt-3 space-y-3">
         {isLoading ? (

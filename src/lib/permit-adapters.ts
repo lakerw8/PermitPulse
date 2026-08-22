@@ -1,4 +1,20 @@
 import type { Permit, Trade, PermitStatus, ContactConfidence } from "@/lib/types";
+import {
+  adapterKey,
+  classifyError,
+  HttpError,
+  isFailure,
+  measureContacts,
+  type AdapterResult,
+  type SourceObservation,
+} from "@/lib/source-health";
+import { suppressSharedContacts } from "@/lib/lead-quality";
+import {
+  classifyStage,
+  extractSourceStatus,
+  inferStageFromQuery,
+  STAGE_LABELS,
+} from "@/lib/lifecycle";
 
 const TRADE_KEYWORDS: Record<Trade, string[]> = {
   HVAC: ["hvac", "heating", "ventilation", "air condition", "cooling", "ductwork", "rooftop unit", "ahu", "chiller", "boiler", "furnace", "mechanical"],
@@ -39,17 +55,17 @@ function isLikelyResidential(description: string): boolean {
   return RESIDENTIAL_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
+/**
+ * Display status for a source's own status string.
+ *
+ * A thin wrapper over `classifyStage` so the 107 adapters that call this get
+ * one shared, corrected mapping. The version it replaced sent denied and
+ * revoked permits to "Under Review", expired and cancelled ones to
+ * "Completed", and everything it did not recognise — including a missing
+ * value — to "Issued".
+ */
 export function mapStatus(status: string | undefined): PermitStatus {
-  if (!status) return "Issued";
-  const s = status.toLowerCase();
-  if (s.includes("issue")) return "Issued";
-  if (s.includes("review") || s.includes("pending")) return "Under Review";
-  if (s.includes("denied") || s.includes("reject") || s.includes("revok")) return "Under Review";
-  if (s.includes("approve")) return "Approved";
-  if (s.includes("complete") || s.includes("finaled") || s.includes("final inspection")) return "Completed";
-  if (s.includes("expire") || s.includes("cancel") || s.includes("withdraw") || s.includes("closed")) return "Completed";
-  if (s.includes("active")) return "Issued";
-  return "Issued";
+  return STAGE_LABELS[classifyStage(status).stage];
 }
 
 export function dateNDaysAgo(n: number): string {
@@ -5526,58 +5542,311 @@ export const METRO_ADAPTERS: Record<string, CityAdapter[]> = {
   "springfield-nj": [springfieldNJ],
 };
 
-export async function fetchAdapter(adapter: CityAdapter, dateStr: string): Promise<Permit[]> {
+/** How long a single source gets before we treat it as unreachable. */
+const REQUEST_TIMEOUT_MS = 15_000;
+
+/** Attempts per source, including the first. Kept small: the cron runs daily. */
+const MAX_ATTEMPTS = 3;
+
+/** Statuses worth trying again. A 404 or 400 will not fix itself. */
+function isRetryable(status: number): boolean {
+  return status === 429 || status === 408 || status >= 500;
+}
+
+function backoffMs(attempt: number): number {
+  return 500 * 2 ** (attempt - 1);
+}
+
+async function delay(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Fetches one source and reports what happened.
+ *
+ * Never throws for an upstream problem: a failure is a described result, not
+ * an absent one. That is the whole point — the previous version returned `[]`
+ * for a 500, a timeout, and a genuinely empty market alike, so a broken source
+ * was indistinguishable from a quiet one.
+ */
+export async function runAdapter(
+  metro: string,
+  adapter: CityAdapter,
+  dateStr: string,
+  days: number
+): Promise<AdapterResult> {
+  const startedAt = Date.now();
+
+  const base: Omit<AdapterResult, "outcome"> = {
+    adapterKey: adapterKey(metro, adapter.domain),
+    metro,
+    city: adapter.city,
+    state: adapter.state,
+    domain: adapter.domain,
+    httpStatus: null,
+    errorClass: null,
+    errorMessage: null,
+    durationMs: 0,
+    rawRecordCount: 0,
+    acceptedCount: 0,
+    rejectedCount: 0,
+    rejectionReasons: {},
+    contacts: { withCompany: 0, withPhone: 0, withEmail: 0 },
+    suppressedPhones: 0,
+    suppressedEmails: 0,
+    sharedContacts: [],
+    observations: [],
+    windowDays: days,
+    windowStart: dateStr,
+    permits: [],
+  };
+
   const url = adapter.buildUrl
     ? adapter.buildUrl(dateStr)
     : `https://${adapter.domain}/resource/${adapter.datasetId}.json?${adapter.buildQuery(dateStr)}`;
 
-  const res = await fetch(url, {
-    headers: { Accept: "application/json", ...adapter.headers },
-    cache: "no-store",
-  });
+  // Derived once per run from the request we are about to make.
+  const queryStage = inferStageFromQuery(url);
 
-  if (!res.ok) return [];
+  let lastStatus: number | null = null;
 
-  const json = await res.json();
-  const records: Record<string, string>[] = adapter.parseResponse
-    ? adapter.parseResponse(json)
-    : json;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: { Accept: "application/json", ...adapter.headers },
+        cache: "no-store",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
 
-  const permits: Permit[] = records
-    .map((r, i) => adapter.toPermit(r, i))
-    .filter((p): p is Permit => p !== null);
+      lastStatus = res.status;
 
-  if (adapter.enrichContacts) {
-    await adapter.enrichContacts(permits);
+      if (!res.ok) {
+        if (isRetryable(res.status) && attempt < MAX_ATTEMPTS) {
+          await delay(backoffMs(attempt));
+          continue;
+        }
+        throw new HttpError(res.status);
+      }
+
+      const json = await res.json();
+      const records: Record<string, string>[] = adapter.parseResponse
+        ? adapter.parseResponse(json)
+        : json;
+
+      if (!Array.isArray(records)) {
+        return {
+          ...base,
+          outcome: "parse_error",
+          httpStatus: res.status,
+          errorClass: "ShapeError",
+          errorMessage: `expected an array, received ${typeof records}`,
+          durationMs: Date.now() - startedAt,
+        };
+      }
+
+      const permits: Permit[] = [];
+      const observations: SourceObservation[] = [];
+      let rejected = 0;
+      for (let i = 0; i < records.length; i++) {
+        const permit = adapter.toPermit(records[i], i);
+        if (!permit) {
+          rejected++;
+          continue;
+        }
+        permits.push(permit);
+        // Recovered from the raw record rather than threaded through 107
+        // adapter signatures. The source's own words are what the lifecycle
+        // log has to preserve.
+        const classified = extractSourceStatus(records[i]);
+        // Only when the record itself says nothing. A published status always
+        // wins over what our query implies.
+        const stage =
+          classified.sourceStatus === null && queryStage !== null
+            ? queryStage
+            : classified.stage;
+        observations.push({
+          permitId: permit.id,
+          sourceStatus: classified.sourceStatus,
+          stage,
+          matched: classified.matched,
+          stageInferredFromQuery:
+            classified.sourceStatus === null && queryStage !== null,
+          // Held only for the records we could not read, which are the ones
+          // worth inspecting later.
+          rawRecord: classified.matched || queryStage !== null ? null : records[i],
+        });
+      }
+
+      if (adapter.enrichContacts) {
+        // Enrichment is best-effort: losing it costs contact detail, not the
+        // permits themselves, so it must not fail the whole source.
+        try {
+          await adapter.enrichContacts(permits);
+        } catch {
+          // Reported through the contact counts below.
+        }
+      }
+
+      // Drop contacts that belong to the permit office rather than a
+      // contractor, before they are stored and sold. See lead-quality.ts.
+      const cleaned = suppressSharedContacts(permits);
+      const accepted = cleaned.permits;
+
+      const common = {
+        ...base,
+        httpStatus: res.status,
+        durationMs: Date.now() - startedAt,
+        rawRecordCount: records.length,
+        acceptedCount: accepted.length,
+        rejectedCount: rejected,
+        // The adapters do not yet say *why* they rejected a record, so this is
+        // reported under one honest bucket rather than invented categories.
+        rejectionReasons: rejected > 0 ? { adapter_returned_null: rejected } : {},
+        contacts: measureContacts(accepted),
+        suppressedPhones: cleaned.suppressedPhones,
+        suppressedEmails: cleaned.suppressedEmails,
+        sharedContacts: cleaned.sharedContacts,
+        observations,
+        permits: accepted,
+      };
+
+      if (records.length === 0) {
+        return { ...common, outcome: "success_with_zero_records" };
+      }
+
+      // Records arrived and every one was dropped. Usually a schema change:
+      // the source renamed a field the adapter reads.
+      if (accepted.length === 0) {
+        return { ...common, outcome: "normalization_error" };
+      }
+
+      return { ...common, outcome: "success" };
+    } catch (err) {
+      const isLastAttempt = attempt === MAX_ATTEMPTS;
+      const transient =
+        err instanceof Error &&
+        (err.name === "AbortError" ||
+          err.name === "TimeoutError" ||
+          err.name === "TypeError");
+
+      if (transient && !isLastAttempt) {
+        await delay(backoffMs(attempt));
+        continue;
+      }
+
+      const { outcome, errorClass, errorMessage } = classifyError(err);
+      return {
+        ...base,
+        outcome,
+        httpStatus: lastStatus,
+        errorClass,
+        errorMessage,
+        durationMs: Date.now() - startedAt,
+      };
+    }
   }
 
-  return permits;
+  return {
+    ...base,
+    outcome: "upstream_error",
+    httpStatus: lastStatus,
+    errorClass: "RetriesExhausted",
+    errorMessage: `no response after ${MAX_ATTEMPTS} attempts`,
+    durationMs: Date.now() - startedAt,
+  };
 }
 
-export async function fetchLivePermits(metroIds: string[], days: number): Promise<Permit[]> {
-  const adapters: CityAdapter[] = [];
+/**
+ * Back-compat wrapper.
+ *
+ * Callers that only want permits and have nowhere to report health can keep
+ * using this; everything that records health calls `runAdapter` directly.
+ */
+export async function fetchAdapter(adapter: CityAdapter, dateStr: string): Promise<Permit[]> {
+  const result = await runAdapter("unknown", adapter, dateStr, 90);
+  return result.permits;
+}
+
+export interface LivePermitsResult {
+  permits: Permit[];
+  /** One entry per source consulted, successes and failures alike. */
+  results: AdapterResult[];
+  /** Sources that failed outright, for the caller to report or refuse on. */
+  failed: AdapterResult[];
+}
+
+/**
+ * Fetches every source behind the given metros.
+ *
+ * One failing source no longer hides the others: results are merged from every
+ * adapter that succeeded, and the failures are returned alongside so the
+ * caller can decide whether a partial answer is honest enough to serve.
+ */
+export async function fetchLivePermitsDetailed(
+  metroIds: string[],
+  days: number
+): Promise<LivePermitsResult> {
+  const pairs: { metro: string; adapter: CityAdapter }[] = [];
   for (const id of metroIds) {
-    const a = METRO_ADAPTERS[id];
-    if (a) adapters.push(...a);
+    for (const adapter of METRO_ADAPTERS[id] ?? []) {
+      pairs.push({ metro: id, adapter });
+    }
   }
 
-  if (adapters.length === 0) return [];
+  if (pairs.length === 0) return { permits: [], results: [], failed: [] };
 
   const dateStr = dateNDaysAgo(days);
-  const results = await Promise.allSettled(
-    adapters.map((adapter) => fetchAdapter(adapter, dateStr))
+  const settled = await Promise.allSettled(
+    pairs.map(({ metro, adapter }) => runAdapter(metro, adapter, dateStr, days))
   );
 
-  const fulfilled = results
-    .filter((r): r is PromiseFulfilledResult<Permit[]> => r.status === "fulfilled")
-    .map((r) => r.value);
+  const results: AdapterResult[] = [];
+  for (let i = 0; i < settled.length; i++) {
+    const outcome = settled[i];
+    if (outcome.status === "fulfilled") {
+      results.push(outcome.value);
+      continue;
+    }
+    // runAdapter is written not to throw, so this is a defect rather than an
+    // upstream problem — but it still has to be counted, not dropped.
+    const { metro, adapter } = pairs[i];
+    const { errorClass, errorMessage } = classifyError(outcome.reason);
+    results.push({
+      adapterKey: adapterKey(metro, adapter.domain),
+      metro,
+      city: adapter.city,
+      state: adapter.state,
+      domain: adapter.domain,
+      outcome: "normalization_error",
+      httpStatus: null,
+      errorClass,
+      errorMessage,
+      durationMs: 0,
+      rawRecordCount: 0,
+      acceptedCount: 0,
+      rejectedCount: 0,
+      rejectionReasons: {},
+      contacts: { withCompany: 0, withPhone: 0, withEmail: 0 },
+      suppressedPhones: 0,
+      suppressedEmails: 0,
+      sharedContacts: [],
+      observations: [],
+      windowDays: days,
+      windowStart: dateStr,
+      permits: [],
+    });
+  }
+
+  const failed = results.filter((r) => isFailure(r.outcome));
+  const fulfilled = results.filter((r) => !isFailure(r.outcome)).map((r) => r.permits);
 
   const cap = Math.min(500, 150 * metroIds.length);
   const byDate = (a: Permit, b: Permit) =>
     new Date(b.filingDate).getTime() - new Date(a.filingDate).getTime();
 
   if (fulfilled.length <= 1) {
-    return (fulfilled[0] || []).sort(byDate).slice(0, cap);
+    const permits = (fulfilled[0] || []).sort(byDate).slice(0, cap);
+    return { permits, results, failed };
   }
 
   const perSource = Math.max(10, Math.floor(cap / fulfilled.length));
@@ -5596,5 +5865,18 @@ export async function fetchLivePermits(metroIds: string[], days: number): Promis
     .sort(byDate)
     .slice(0, remaining);
 
-  return [...reserved, ...overflow].sort(byDate);
+  return {
+    permits: [...reserved, ...overflow].sort(byDate),
+    results,
+    failed,
+  };
+}
+
+/** Permits only, for callers with nowhere to report source health. */
+export async function fetchLivePermits(
+  metroIds: string[],
+  days: number
+): Promise<Permit[]> {
+  const { permits } = await fetchLivePermitsDetailed(metroIds, days);
+  return permits;
 }

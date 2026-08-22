@@ -29,19 +29,19 @@ export const metadata: Metadata = {
     default: "PermitPulse - Commercial Permit Leads for Subcontractors",
   },
   description:
-    "Turn newly filed commercial building permits into clean, trade-filtered leads with GC contact information. Reach decision-makers weeks before public bid boards open.",
+    "Turn newly filed commercial building permits into clean, trade-filtered leads, with the contractor contact details city records publish. Reach GCs weeks before public bid boards open.",
   openGraph: {
     type: "website",
     siteName: "PermitPulse",
     title: "PermitPulse - Commercial Permit Leads for Subcontractors",
     description:
-      "Turn newly filed commercial building permits into clean, trade-filtered leads with GC contact information. Reach decision-makers weeks before public bid boards open.",
+      "Turn newly filed commercial building permits into clean, trade-filtered leads, with the contractor contact details city records publish. Reach GCs weeks before public bid boards open.",
   },
   twitter: {
     card: "summary_large_image",
     title: "PermitPulse - Commercial Permit Leads for Subcontractors",
     description:
-      "Turn newly filed commercial building permits into clean, trade-filtered leads with GC contact information. Reach decision-makers weeks before public bid boards open.",
+      "Turn newly filed commercial building permits into clean, trade-filtered leads, with the contractor contact details city records publish. Reach GCs weeks before public bid boards open.",
   },
 };
 

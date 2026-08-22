@@ -3,11 +3,11 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Browse commercial building permits for free. Unlock GC contacts for $79/mo. 7-day free trial, no credit card required.",
+    "Browse commercial building permits for free. Unlock GC contacts for $79/mo. 7-day free trial, cancel any time.",
   openGraph: {
     title: "Pricing | PermitPulse",
     description:
-      "Browse commercial building permits for free. Unlock GC contacts for $79/mo. 7-day free trial, no credit card required.",
+      "Browse commercial building permits for free. Unlock GC contacts for $79/mo. 7-day free trial, cancel any time.",
   },
   twitter: {
     card: "summary_large_image",

@@ -6,46 +6,59 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Check, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import {
-  CITY_COUNT_LABEL,
-  MARKET_COUNT_LABEL,
-  TRADE_COUNT_LABEL,
-} from "@/lib/coverage";
+import { MARKET_COUNT_LABEL, TRADE_COUNT_LABEL } from "@/lib/coverage";
+import { useCoverage, marketCountLabel } from "@/lib/use-coverage";
+import { CONFIDENCE_DEFINITIONS, CONFIDENCE_DISCLAIMER } from "@/lib/contact-confidence";
 
 const FREE_FEATURES = [
-  `Browse all permits across ${CITY_COUNT_LABEL}`,
+  "Browse every permit we hold",
   "Filter by trade, value & status",
   "Save up to 5 leads",
 ];
 
+/**
+ * Each line has to describe something that ships today.
+ *
+ * "Full GC name, phone & email" became "where the city publishes them"
+ * because most records do not: at the last measurement 48% of cached permits
+ * named no contractor at all and 5% carried a phone number. "Weekly email
+ * digest" was removed outright — no digest exists, and nothing sends email.
+ */
 const PAID_FEATURES = [
-  "Full GC name, phone & email",
+  "GC name, phone & email where the city publishes them",
   "Unlimited saved leads",
-  "All cities & trade filters",
-  "Weekly email digest with GC details",
-  "CSV export",
+  "CSV export of every saved lead",
+  "Cancel any time from your dashboard",
 ];
 
 const FAQS = [
   {
     q: "What data sources do you use?",
-    a: "Official municipal open data portals that publish building permits daily in machine-readable formats.",
+    a: "Official municipal open data portals that publish building permits in machine-readable formats. We do not scrape private sites or buy third-party lists.",
   },
   {
-    q: "How accurate is the GC contact info?",
-    a: "Each contact includes a confidence score (High, Medium, or Low). We extract names from permit records and enrich with public business data.",
+    q: "How often will a permit actually have a phone number?",
+    a: "Less often than you would like, and we would rather tell you up front. Most city portals publish a contractor name but no contact details. At our last measurement about half of cached permits named a contractor and roughly one in twenty carried a phone number. Every permit shows you what it holds before you spend time on it.",
+  },
+  {
+    q: "What does the confidence label mean?",
+    a: `It tells you which field of the city record the name came from. High: ${CONFIDENCE_DEFINITIONS.High.summary.toLowerCase()}. Medium: ${CONFIDENCE_DEFINITIONS.Medium.summary.toLowerCase()}, which is often the property owner rather than the GC. Low: ${CONFIDENCE_DEFINITIONS.Low.summary.toLowerCase()}. ${CONFIDENCE_DISCLAIMER}`,
   },
   {
     q: "Can I cancel anytime?",
-    a: "Yes. No contracts. Cancel from your dashboard and keep access through the end of your billing period.",
+    a: "Yes. No contracts. Open the billing portal from your dashboard to cancel, and you keep access through the end of the period you have paid for.",
   },
   {
     q: "How fresh is the data?",
-    a: "New permits appear within 24–48 hours of being published on the city portal.",
+    a: "Sources refresh on weekday mornings, so a permit generally appears within one to three business days of the city publishing it. The permits page shows when sources were last refreshed, so you are never guessing.",
+  },
+  {
+    q: "How much history do you keep?",
+    a: "Up to 90 days of filings, filterable down to the last 7, 14, or 30 days.",
   },
   {
     q: "What cities do you cover?",
-    a: `${CITY_COUNT_LABEL} across ${MARKET_COUNT_LABEL} in the US, including Chicago, Austin, San Francisco, Seattle, New York, and many more.`,
+    a: `The picker lists ${MARKET_COUNT_LABEL} across the US, including Chicago, Austin, San Francisco, Seattle, and New York. Not every listed city is returning data yet — the live count of markets currently returning permits is shown at the top of this page, and a market with no data shows as empty rather than pretending otherwise.`,
   },
 ];
 
@@ -53,6 +66,7 @@ export default function PricingPage() {
   const { user, isPaid } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const coverage = useCoverage();
 
   async function handleCheckout() {
     if (!user) {
@@ -84,6 +98,16 @@ export default function PricingPage() {
         <p className="mt-3 text-sm text-muted-foreground">
           Find the lead for free. Pay to reach them.
         </p>
+        {/* Measured, not listed. This counts sources that returned permits at
+            their last refresh, which is a smaller number than the picker
+            shows — and the only one we are entitled to advertise. */}
+        {coverage && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {marketCountLabel(coverage.operationalMarkets)} currently returning
+            permits &middot; {coverage.cachedPermits.toLocaleString()} permits
+            available now
+          </p>
+        )}
       </div>
 
       <div className="mx-auto mt-10 grid max-w-3xl gap-4 sm:grid-cols-2">
@@ -144,7 +168,7 @@ export default function PricingPage() {
           </div>
 
           <p className="mt-1.5 text-xs text-muted-foreground">
-            7-day free trial &middot; cancel anytime
+            7-day free trial &middot; card required &middot; cancel anytime
           </p>
 
           <ul className="mt-5 space-y-2.5">
@@ -205,7 +229,7 @@ export default function PricingPage() {
                 { label: "Saved leads", free: "5", paid: "Unlimited" },
                 { label: "GC contact info", free: false, paid: true },
                 { label: "CSV export", free: false, paid: true },
-                { label: "Weekly email digest", free: false, paid: true },
+                { label: "Permit history", free: "90 days", paid: "90 days" },
               ].map((row) => (
                 <tr key={row.label} className="border-b border-border/50">
                   <td className="py-2.5 pr-6">{row.label}</td>
@@ -239,8 +263,8 @@ export default function PricingPage() {
           <span className="font-medium text-foreground">
             Every account includes
           </span>{" "}
-          Full permit history &middot; {CITY_COUNT_LABEL} &middot;{" "}
-          {TRADE_COUNT_LABEL} &middot; Daily data refresh
+          90 days of permit history &middot; {TRADE_COUNT_LABEL} &middot;{" "}
+          Weekday source refresh
         </p>
       </div>
 

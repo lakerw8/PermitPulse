@@ -12,6 +12,10 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { GCContact } from "@/lib/types";
+import {
+  CONFIDENCE_DEFINITIONS,
+  CONFIDENCE_DISCLAIMER,
+} from "@/lib/contact-confidence";
 
 interface LockedContactProps {
   contact: GCContact;
@@ -34,6 +38,7 @@ export function LockedContact({ contact }: LockedContactProps) {
             <h3 className="text-sm font-semibold">General Contractor</h3>
             <Badge
               variant="outline"
+              title={CONFIDENCE_DEFINITIONS[contact.confidence].detail}
               className="ml-auto border-green-300 text-green-700 dark:border-green-700 dark:text-green-400 text-xs"
             >
               <ShieldCheck className="mr-1 h-3 w-3" />
@@ -65,6 +70,14 @@ export function LockedContact({ contact }: LockedContactProps) {
               </div>
             )}
           </div>
+
+          {/* Says what the badge means. A "High confidence" label with no
+              explanation reads as "we checked this", and nothing in the
+              pipeline checks anything. */}
+          <p className="mt-3 border-t border-green-200 pt-2.5 text-xs leading-relaxed text-muted-foreground dark:border-green-900">
+            {CONFIDENCE_DEFINITIONS[contact.confidence].detail}{" "}
+            {CONFIDENCE_DISCLAIMER}
+          </p>
         </CardContent>
       </Card>
     );
@@ -88,7 +101,11 @@ export function LockedContact({ contact }: LockedContactProps) {
         <div className="mb-3 flex items-center gap-2">
           <Lock className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold">General Contractor Contact</h3>
-          <Badge variant="outline" className="ml-auto text-xs">
+          <Badge
+            variant="outline"
+            title={CONFIDENCE_DEFINITIONS[contact.confidence].detail}
+            className="ml-auto text-xs"
+          >
             {contact.confidence} confidence
           </Badge>
         </div>
@@ -134,6 +151,8 @@ export function LockedContact({ contact }: LockedContactProps) {
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               Paid plans reveal every contact detail we hold, on every permit.
+              {" "}
+              {CONFIDENCE_DISCLAIMER}
             </p>
             <div className="mt-3 flex gap-2">
               <Button size="sm" nativeButton={false} render={<Link href="/pricing" />}>

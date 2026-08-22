@@ -348,17 +348,44 @@ export type Trade =
   | "Demolition"
   | "General Construction";
 
+/**
+ * The display form of a lifecycle stage. One-to-one with `LifecycleStage` in
+ * `lifecycle.ts` — the negative outcomes are listed because a refused or
+ * revoked permit has to be able to say so, rather than being folded into
+ * "Under Review" as it was before.
+ */
 export type PermitStatus =
-  | "Issued"
+  | "Filed"
   | "Under Review"
   | "Approved"
-  | "Completed";
+  | "Issued"
+  | "Completed"
+  | "Rejected"
+  | "Withdrawn"
+  | "Revoked"
+  | "Expired"
+  | "Canceled"
+  | "Status Unknown";
 
+/**
+ * Offered in the filter, in workflow order.
+ *
+ * Terminal negatives are included deliberately: a subcontractor tracking a
+ * project wants to know it was revoked, and excluding them from the filter
+ * would make those permits unreachable rather than merely unattractive.
+ */
 export const PERMIT_STATUSES: PermitStatus[] = [
-  "Issued",
+  "Filed",
   "Under Review",
   "Approved",
+  "Issued",
   "Completed",
+  "Rejected",
+  "Withdrawn",
+  "Revoked",
+  "Expired",
+  "Canceled",
+  "Status Unknown",
 ];
 
 export type ContactConfidence = "High" | "Medium" | "Low";
@@ -414,6 +441,13 @@ export interface Permit {
   gcContact: GCContact;
   source: string;
   sourceUpdatedAt: string;
+  /**
+   * Set by the API from the lifecycle columns. Optional because permits served
+   * straight from a live adapter have not been through a refresh yet.
+   */
+  sourceStatus?: string | null;
+  opportunitySignal?: "early" | "go" | "closed" | "none";
+  actionableAt?: string | null;
 }
 
 export interface SavedLead {
@@ -466,11 +500,11 @@ export const PRICING_PLANS: PricingPlan[] = [
     description: "Full access to win more work",
     highlighted: true,
     features: [
-      "Full GC name, phone & email",
+      "GC name, phone & email where the city publishes them",
       "Unlimited saved leads",
       "All metros & trades",
-      "Weekly email digest",
-      "CSV export",
+      "CSV export of every saved lead",
+      "Cancel any time from your dashboard",
     ],
   },
 ];

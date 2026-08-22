@@ -8,6 +8,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { isSupported } from "@/lib/coverage-registry";
 import {
   REGIONS,
   MULTI_CITY_REGIONS,
@@ -101,7 +102,7 @@ export function RegionPicker({ selected, onChange }: RegionPickerProps) {
   /** Replace the whole selection with one market. The one-click common case. */
   const chooseRegion = useCallback(
     (region: Region) => {
-      onChange(region.cityIds);
+      onChange(region.cityIds.filter(isSupported));
       rememberRegion(region.id);
       setOpen(false);
     },
@@ -208,9 +209,10 @@ export function RegionPicker({ selected, onChange }: RegionPickerProps) {
   );
 
   const selectionState = (region: Region) => {
-    const hits = region.cityIds.filter((c) => selectedSet.has(c)).length;
+    const covered = region.cityIds.filter(isSupported);
+    const hits = covered.filter((c) => selectedSet.has(c)).length;
     if (hits === 0) return "none" as const;
-    return hits === region.cityIds.length ? ("all" as const) : ("some" as const);
+    return hits === covered.length ? ("all" as const) : ("some" as const);
   };
 
   return (
@@ -423,6 +425,10 @@ function RegionRow({
   highlightCities,
 }: RegionRowProps) {
   const multiCity = region.cityIds.length > 1;
+  // A market with no covered city cannot return anything. Single-city markets
+  // in that state are inert, so they are shown but not selectable.
+  const coveredCount = region.cityIds.filter(isSupported).length;
+  const selectable = coveredCount > 0;
 
   return (
     <div>
@@ -431,17 +437,23 @@ function RegionRow({
           checked={state === "all"}
           indeterminate={state === "some"}
           onCheckedChange={onToggle}
+          disabled={!selectable}
           aria-label={`Include ${region.name}`}
           className="shrink-0"
         />
         <button
           type="button"
           onClick={onChoose}
-          className="flex min-w-0 flex-1 items-baseline gap-2 text-left cursor-pointer"
+          disabled={!selectable}
+          className="flex min-w-0 flex-1 items-baseline gap-2 text-left cursor-pointer disabled:cursor-default"
         >
-          <span className="truncate text-sm">{region.name}</span>
+          <span
+            className={`truncate text-sm ${selectable ? "" : "text-muted-foreground/50"}`}
+          >
+            {region.name}
+          </span>
           <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-            {regionStates(region)}
+            {selectable ? regionStates(region) : "No source yet"}
             {multiCity ? ` · ${region.cityIds.length}` : ""}
           </span>
         </button>
@@ -468,6 +480,10 @@ function RegionRow({
             const city = getCity(cityId);
             if (!city) return null;
             const highlighted = highlightCities?.includes(cityId);
+            // A city with no source returns nothing, always. Saying so in the
+            // picker is cheaper for everyone than letting a contractor select
+            // it and conclude their market is dead.
+            const covered = isSupported(cityId);
             return (
               <label
                 key={cityId}
@@ -476,15 +492,25 @@ function RegionRow({
                 <Checkbox
                   checked={selectedSet.has(cityId)}
                   onCheckedChange={() => onToggleCity(cityId)}
+                  disabled={!covered}
                   className="shrink-0"
                 />
                 <span
                   className={`truncate text-sm ${
-                    highlighted ? "font-medium text-foreground" : "text-muted-foreground"
+                    !covered
+                      ? "text-muted-foreground/50"
+                      : highlighted
+                        ? "font-medium text-foreground"
+                        : "text-muted-foreground"
                   }`}
                 >
                   {city.name}
                 </span>
+                {!covered && (
+                  <span className="ml-auto shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground/60">
+                    No source yet
+                  </span>
+                )}
               </label>
             );
           })}

@@ -148,10 +148,26 @@ export default function PermitDetailPage({
               <Badge variant={STATUS_VARIANT[permit.status] ?? "outline"}>
                 {permit.status}
               </Badge>
+              {permit.opportunitySignal === "early" && (
+                <Badge variant="secondary">Early signal</Badge>
+              )}
+              {permit.opportunitySignal === "go" && (
+                <Badge variant="default">Go signal</Badge>
+              )}
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               {permit.city}, {permit.state} {permit.zip}
             </p>
+            {/* The city's own wording, kept whenever it differs from our
+                label, so a normalization mistake is visible rather than
+                authoritative. */}
+            {permit.sourceStatus &&
+              permit.sourceStatus.toLowerCase() !==
+                permit.status.toLowerCase() && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  City record says: &ldquo;{permit.sourceStatus}&rdquo;
+                </p>
+              )}
           </div>
           <Button
             variant={saved ? "default" : "outline"}

@@ -36,6 +36,10 @@ export const PUBLIC_COLUMNS = [
   "has_gc_contact_name",
   "has_gc_phone",
   "has_gc_email",
+  // Lifecycle. Public: these describe the permit's progress, not its contacts.
+  "source_status",
+  "opportunity_signal",
+  "actionable_at",
 ] as const;
 
 /** Added only for an entitled viewer. This is what the paid plan sells. */
@@ -91,6 +95,10 @@ export function mapRowToPermit(
     },
     source: row.source as string,
     sourceUpdatedAt: (row.source_updated_at as string) || "",
+    sourceStatus: (row.source_status as string) ?? null,
+    opportunitySignal:
+      (row.opportunity_signal as Permit["opportunitySignal"]) ?? undefined,
+    actionableAt: (row.actionable_at as string) ?? null,
   };
 
   return applyEntitlement(permit, entitled);

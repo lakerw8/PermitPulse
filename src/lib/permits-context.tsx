@@ -39,6 +39,14 @@ interface PermitsContextValue {
   isLoading: boolean;
   isLoadingMore: boolean;
   error: string | null;
+  /**
+   * Why this list is incomplete, when it is. Distinct from `error`: a degraded
+   * response still carries real permits, it just is not the whole picture.
+   */
+  degraded: PermitPage["degraded"];
+  /** Which selected cities have a source and which do not. */
+  coverage: PermitPage["coverage"];
+  freshness: PermitPage["freshness"];
 
   query: PermitQuery;
   setQuery: (patch: Partial<PermitQuery>) => void;
@@ -50,7 +58,17 @@ interface PermitsContextValue {
 
   loadMore: () => void;
   refresh: () => void;
-  lastUpdated: Date | null;
+}
+
+/** Carries the API's own degraded explanation through the promise rejection. */
+class PermitRequestError extends Error {
+  constructor(
+    readonly status: number,
+    readonly page: PermitPage | null
+  ) {
+    super(`Request failed (${status})`);
+    this.name = "PermitRequestError";
+  }
 }
 
 const PermitsContext = createContext<PermitsContextValue | null>(null);
@@ -69,7 +87,9 @@ export function PermitsProvider({ children }: { children: ReactNode }) {
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [degraded, setDegraded] = useState<PermitPage["degraded"]>(undefined);
+  const [coverage, setCoverage] = useState<PermitPage["coverage"]>(undefined);
+  const [freshness, setFreshness] = useState<PermitPage["freshness"]>(undefined);
   const [reloadToken, setReloadToken] = useState(0);
   // Which query the data on hand belongs to, and any error from loading it.
   // Loading is derived from these rather than tracked as its own flag.
@@ -114,7 +134,10 @@ export function PermitsProvider({ children }: { children: ReactNode }) {
         offset,
       });
       const res = await fetch(`/api/permits?${params}`, { signal });
-      if (!res.ok) throw new Error(`Request failed (${res.status})`);
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as PermitPage | null;
+        throw new PermitRequestError(res.status, body);
+      }
       return (await res.json()) as PermitPage;
     },
     []
@@ -144,18 +167,28 @@ export function PermitsProvider({ children }: { children: ReactNode }) {
         setPermits(data.permits);
         setTotal(data.total);
         setHasMore(data.hasMore);
-        setLastUpdated(new Date());
+        setDegraded(data.degraded);
+        setCoverage(data.coverage);
+        setFreshness(data.freshness);
         setLoaded({ key: requestKey, error: null });
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (controller.signal.aborted) return;
         setPermits([]);
         setTotal(0);
         setHasMore(false);
-        setLastUpdated(new Date());
+        setCoverage(undefined);
+        setFreshness(undefined);
+        // A 503 carries the API's own explanation of what went wrong. Prefer
+        // it over the generic fallback so the customer learns whether their
+        // sources are down or their selection is uncovered.
+        const page = err instanceof PermitRequestError ? err.page : null;
+        setDegraded(page?.degraded);
         setLoaded({
           key: requestKey,
-          error: "Permit data is temporarily unavailable. Please try again later.",
+          error: page?.degraded
+            ? page.degraded.message
+            : "Permit data is temporarily unavailable. Please try again later.",
         });
       });
 
@@ -190,6 +223,9 @@ export function PermitsProvider({ children }: { children: ReactNode }) {
       isLoading: hasRegion ? isLoading : false,
       isLoadingMore,
       error: hasRegion ? error : null,
+      degraded: hasRegion ? degraded : undefined,
+      coverage: hasRegion ? coverage : undefined,
+      freshness: hasRegion ? freshness : undefined,
       query,
       setQuery,
       resetFilters,
@@ -197,15 +233,16 @@ export function PermitsProvider({ children }: { children: ReactNode }) {
       setSearchInput,
       loadMore,
       refresh,
-      lastUpdated,
     }),
     [
+      coverage,
+      degraded,
       error,
+      freshness,
       hasMore,
       hasRegion,
       isLoading,
       isLoadingMore,
-      lastUpdated,
       loadMore,
       permits,
       query,

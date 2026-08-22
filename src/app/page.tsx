@@ -4,12 +4,16 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PermitCard } from "@/components/permit-card";
-import { METROS, type Permit } from "@/lib/types";
+import { type Permit } from "@/lib/types";
+import { useCoverage, freshnessLabel } from "@/lib/use-coverage";
 import { ArrowRight } from "lucide-react";
 
 export default function HomePage() {
   const [recentPermits, setRecentPermits] = useState<Permit[]>([]);
-  const [totalCount, setTotalCount] = useState<number | null>(null);
+  // Every number below comes from measured data. The hero used to print
+  // METROS.length — the size of the picker — as "cities with live tracking",
+  // which counted hundreds of cities that return nothing.
+  const coverage = useCoverage();
 
   useEffect(() => {
     const params = new URLSearchParams({
@@ -20,9 +24,7 @@ export default function HomePage() {
     fetch(`/api/permits?${params}`)
       .then((r) => r.json())
       .then((data) => {
-        const permits: Permit[] = data.permits ?? [];
-        setRecentPermits(permits);
-        setTotalCount(data.total ?? permits.length);
+        setRecentPermits(data.permits ?? []);
       })
       .catch(() => {});
   }, []);
@@ -37,17 +39,17 @@ export default function HomePage() {
               Live permit data
             </p>
             <div className="mt-3 font-heading text-[clamp(3.5rem,8vw,7rem)] font-bold leading-none tracking-tighter tabular-nums">
-              {METROS.length}
+              {coverage ? coverage.operationalMarkets : "\u2014"}
             </div>
             <p className="mt-2 font-heading text-xl font-medium tracking-tight text-foreground sm:text-2xl">
-              cities with live commercial permit tracking.
+              markets returning commercial permits right now.
             </p>
           </div>
           <div className="max-w-lg">
             <p className="text-base leading-relaxed text-muted-foreground">
               PermitPulse turns newly filed commercial building permits into
-              trade-filtered leads with GC contact info. Reach decision-makers
-              weeks before bid boards open.
+              trade-filtered leads, with whatever contractor contact details the
+              city published. Reach GCs weeks before bid boards open.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
@@ -76,9 +78,22 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 divide-x divide-border sm:grid-cols-4">
             {[
-              { value: totalCount !== null ? `${totalCount}+` : "...", label: "Permits tracked" },
-              { value: `${METROS.length}+`, label: "Cities covered" },
-              { value: "24hr", label: "Data refresh" },
+              {
+                value: coverage ? coverage.cachedPermits.toLocaleString() : "\u2014",
+                label: "Permits available now",
+              },
+              {
+                value: coverage
+                  ? `${coverage.operationalMarkets}/${coverage.configuredMarkets}`
+                  : "\u2014",
+                label: "Sources returning data",
+              },
+              {
+                value: coverage
+                  ? freshnessLabel(coverage.lastSuccessfulRefresh)
+                  : "\u2014",
+                label: "Sources last refreshed",
+              },
               { value: "Free", label: "To browse" },
             ].map((stat) => (
               <div key={stat.label} className="px-4 py-5 sm:px-6">
@@ -106,8 +121,8 @@ export default function HomePage() {
                 Latest filings
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Commercial permits from {METROS.length} cities including
-                Chicago, LA, NYC, and more.
+                Commercial permits from Chicago, LA, NYC and every other market
+                currently returning data.
               </p>
               <Link
                 href="/permits"
@@ -156,7 +171,7 @@ export default function HomePage() {
                   step: "2.0",
                   title: "Unlock GC Contacts",
                   description:
-                    "Get the General Contractor's name, phone number, and email. Our enrichment engine finds the right decision-maker on every permit.",
+                    "See the contractor name, phone, and email the city published \u2014 and, before you pay, exactly which of those a permit holds. Many records name a contractor but no phone; we show you which is which instead of pretending every permit has one.",
                 },
                 {
                   step: "3.0",
@@ -193,7 +208,7 @@ export default function HomePage() {
                 Stop missing commercial projects.
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                7-day free trial. No credit card required.
+                7-day free trial. Card required, cancel any time.
               </p>
             </div>
             <Link

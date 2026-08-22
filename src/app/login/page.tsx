@@ -33,11 +33,15 @@ export default function LoginPage() {
     if (user) router.replace("/dashboard");
   }, [user, router]);
 
-  useEffect(() => {
-    if (searchParams.get("error") === "auth") {
-      setError("Sign-in link expired or was already used. Please try again.");
-    }
-  }, [searchParams]);
+  // Derived, not assigned: this message is a function of the URL, so copying
+  // it into state in an effect only bought a second render and a stale value
+  // to clear.
+  const linkError =
+    searchParams.get("error") === "auth"
+      ? "Sign-in link expired or was already used. Please try again."
+      : null;
+  // A failure from this session wins over the one the link arrived with.
+  const shownError = error ?? linkError;
 
   if (user) return null;
 
@@ -98,10 +102,10 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {error && (
+        {shownError && (
           <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>{error}</span>
+            <span>{shownError}</span>
           </div>
         )}
 

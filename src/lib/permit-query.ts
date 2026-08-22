@@ -45,6 +45,38 @@ export interface PermitQuery {
   sort: SortOption;
 }
 
+/**
+ * Why a response holds fewer permits than the selection implies.
+ *
+ * An empty list is ambiguous on its own — it could be a quiet market, a city
+ * we have no source for, or an upstream outage. The UI has to be able to tell
+ * a customer which, so the API says.
+ */
+export type DegradedReason =
+  /** Every selected city resolved to no source at all. */
+  | "no_coverage"
+  /** Some selected cities have no source; the rest were queried. */
+  | "partial_coverage"
+  /** Sources failed and no usable cache existed. */
+  | "sources_unavailable"
+  /** Live fetch failed, so cached permits are being served instead. */
+  | "serving_stale";
+
+export interface CoverageReport {
+  /** Cities that resolved to at least one source. */
+  supported: string[];
+  /** Selected cities with no source configured. */
+  unsupported: string[];
+  /** Ids the registry does not recognise at all. */
+  unknown: string[];
+}
+
+export interface FreshnessReport {
+  /** Last time any queried source produced data, ISO 8601. */
+  lastSuccessAt: string | null;
+  isStale: boolean;
+}
+
 export interface PermitPage {
   permits: Permit[];
   /** Permits matching the filters in full, independent of pagination. */
@@ -53,6 +85,9 @@ export interface PermitPage {
   hasMore: boolean;
   /** "cache" when served from the permits table, "live" from source adapters. */
   source: "cache" | "live";
+  coverage?: CoverageReport;
+  freshness?: FreshnessReport;
+  degraded?: { reason: DegradedReason; message: string };
 }
 
 export const EMPTY_QUERY: PermitQuery = {
